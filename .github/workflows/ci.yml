@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch replaces the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Check, test and build (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every Node line the engines support.
+        node: ['22', '24', '26']
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # Installs Vite+ at the version this repository pins, the Node version, pnpm and dependencies.
+      - uses: voidzero-dev/setup-vp@v1.22.0
+        with:
+          version-file: package.json
+          node-version: ${{ matrix.node }}
+          cache: true
+      # Format, lint and type checks, then every test, then the build.
+      # In CI a scenario with no recorded answer fails instead of recording one.
+      - run: vp run verify
+
+  speed:
+    name: Speed targets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: voidzero-dev/setup-vp@v1.22.0
+        with:
+          version-file: package.json
+          node-version: '24'
+          cache: true
+      # Each plays a whole simulated event and fails if any round is not proven best,
+      # or is slower than the target: 2 s at 10,001 Entrants, 10 s at 20,001.
+      - run: vp run bench 10001 15 --check
+      - run: vp run bench 20001 15 --check

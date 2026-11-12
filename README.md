@@ -38,6 +38,8 @@ pnpm build
 pnpm bench 10001 15 --check   # time a simulated event
 ```
 
+CI runs `verify` on Node 22, 24 and 26, and the benchmark with `--check`, on every push to `main` and every pull request (`.github/workflows/ci.yml`).
+
 All tooling is Vite+ (`vp`): Oxfmt, Oxlint with type checks, Vitest, and `vp pack` for builds, run across packages by `vp run`. Lint, format and test settings live in the root `vite.config.ts`; each package has its own for `pack`. Tests import from `vite-plus/test`.
 
 ## Rules the setup enforces
