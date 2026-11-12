@@ -35,7 +35,7 @@ Every point here has been agreed.
 | Fact | Details |
 |---|---|
 | id | String, unique. |
-| Status | Optional: dropped, with the round; or removed. |
+| Status | Optional: dropped, with the last round they took part in; or removed. |
 
 **Results**: one flat list.
 
@@ -49,7 +49,7 @@ Every point here has been agreed.
 | Input | Details |
 |---|---|
 | Configuration | Required. The points method, the allowed Outcomes and the Tiebreakers in order, with every setting stated. Nothing is assumed. A Preset or the starting Configuration can be passed as it is. |
-| Planned rounds | Optional. |
+| Planned rounds | Optional. Used by a win rate that counts planned rounds. For Standings during an event, pass the rounds completed so far. |
 | Random Seed | String. Needed only when the random Tiebreaker is chosen. |
 
 Optional inputs are required only when the chosen Configuration uses them. Game scores, a named extra score, Status and planned rounds all follow this rule; a missing one is an input error.
@@ -69,7 +69,7 @@ Points always come from the Configuration. A Result never states its own points.
 | The difference in a named extra score | victory points 0 to 5 apart: 10 each; 6 to 10 apart: 11 and 9 |
 | A named extra score itself | Score is total victory points |
 
-How a Bye scores is a separate setting: its points, its game score, and whether it counts as a round played.
+How a Bye scores is a separate setting: its points, its game score, and whether it counts as a round played. A loss with no opponent has the same three settings.
 
 ### Allowed Outcomes
 
@@ -93,7 +93,7 @@ The v1 catalogue:
 - Head-to-head, when exactly two Entrants are level and they met.
 - Random.
 
-Each percentage entry carries settings: the minimum floor, what counts as a round played, and how Byes and dropped opponents count.
+Each rate carries settings: whether it counts wins or points, whether it runs over rounds played or planned rounds, the minimum floor, a cap for dropped Entrants, and what an Entrant with no opponents gets. Exact definitions are in `packages/standings/RULES.md`.
 
 ### Still level
 
@@ -108,7 +108,8 @@ Standings formulas are published for most rule sets, so the engine ships Presets
 - Each Preset is tied to one dated rules document.
 - A Preset exists only where that document specifies every setting. Any assumption is listed with it.
 - A rules update adds a new Preset. An existing Preset never changes.
-- Today that allows Magic and Pokémon. One Piece and Star Wars Unlimited each leave one setting unstated.
+- Built: Magic (February 27 2026) and Pokémon (September 1 2026). Each lists five or six points its document leaves open, and the choice made.
+- Not built: One Piece and Star Wars Unlimited, which each leave a setting unstated.
 
 ### Starting Configuration
 
@@ -126,6 +127,7 @@ It needs match Outcomes only, no game scores.
 One row per Entrant, in order:
 
 - Score.
+- The record: wins, losses and draws.
 - The value of each Tiebreaker, as an exact fraction plus a plain number for display.
 - Rank.
 - What pairing needs: opponents faced and Byes received. A mapping function in the shared package turns rows into pairing Entrants.
@@ -176,7 +178,7 @@ Same promises as the Pairing Engine, each enforced by tests:
 ## Speed
 
 - Target: a full recalculation for 20,000 Entrants over 15 rounds in 1 second, one thread, mid-range laptop.
-- Provisional until measured during the build. No prototype first: it is a few passes over the Results with no search.
+- Measured: 20,001 Entrants, 15 rounds, 150,015 Results: about 0.4 s under the starting Configuration and both Presets (Apple M4, Node 26). Not measured on a mid-range laptop or in a browser.
 
 ## Decision records
 
