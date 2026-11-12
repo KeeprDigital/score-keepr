@@ -44,12 +44,36 @@ export function breaksOf(constraint: Constraint, field: Field): Breaks | undefin
   }
 }
 
-/** The levels of a Configuration in priority order, with Shuffle Positions deciding last. */
+/** A level together with the Constraint it came from. */
+export type ConstraintLevel = {
+  constraint: Constraint
+  /** Set for the two levels of `pair-down-choice`. */
+  part?: 'from' | 'opponent'
+  level: Level
+}
+
+/** The levels a Configuration asks for, in priority order, without Shuffle Positions. */
+export function constraintLevels(
+  configuration: readonly Constraint[],
+  field: Field,
+): ConstraintLevel[] {
+  const labelled: ConstraintLevel[] = []
+  for (const constraint of configuration) {
+    const levels = levelsOfConstraint(constraint, field)
+    for (const [at, level] of levels.entries()) {
+      if (constraint.type === 'pair-down-choice') {
+        labelled.push({ constraint, part: at === 0 ? 'from' : 'opponent', level })
+      } else {
+        labelled.push({ constraint, level })
+      }
+    }
+  }
+  return labelled
+}
+
+/** Every level in priority order: the Configuration, then Shuffle Positions deciding last. */
 export function levelsOf(configuration: readonly Constraint[], field: Field): Level[] {
-  const levels: Level[] = []
-  for (const constraint of configuration) levels.push(...levelsOfConstraint(constraint, field))
-  levels.push(shuffleLevel(field))
-  return levels
+  return [...constraintLevels(configuration, field).map((each) => each.level), shuffleLevel(field)]
 }
 
 function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {

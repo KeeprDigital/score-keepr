@@ -75,3 +75,56 @@ export type RoundSuccess = {
 }
 
 export type RoundResult = Failure | RoundSuccess
+
+/** A Swiss round plus a set of Pairings made by hand, to be checked rather than replaced. */
+export type CheckInput = RoundInput & {
+  pairings: [EntrantId, EntrantId][]
+  /** Entrants given a Bye. */
+  byes: EntrantId[]
+  /** Also work out the best possible and compare. Costs a full pairing run. */
+  compare?: boolean
+}
+
+/** What is wrong with who appears in a hand-made set, before any Constraint is considered. */
+export type Coverage = {
+  /** Present Entrants who are in no Pairing and have no Bye. */
+  missing: EntrantId[]
+  /** Present Entrants who appear more than once. */
+  repeated: EntrantId[]
+  /** Ids used in the Pairings or Byes that are not Entrants in this call. */
+  unknown: EntrantId[]
+  /** How many Byes a complete set must have: 1 when the count is odd, otherwise 0. */
+  byesExpected: number
+}
+
+/** One level of the Configuration, scored for the given Pairings and for the best possible. */
+export type LevelComparison = {
+  constraint: Constraint
+  /** Set for the two levels of `pair-down-choice`. */
+  part?: 'from' | 'opponent'
+  /** Lower is better. For a yes-or-no Constraint this is how many times it is broken. */
+  given: number
+  best: number
+}
+
+export type Comparison = {
+  /** True when the given Pairings are as good as the best on every Constraint. Always exact. */
+  asGoodAsBest: boolean
+  /** False when the best could not be proven, for example because the work limit was hit. */
+  provenBest: boolean
+  /** In Configuration order. Shuffle Positions are left out: a hand-made set never matches them. */
+  levels: LevelComparison[]
+}
+
+export type CheckSuccess = {
+  ok: true
+  coverage: Coverage
+  /** The given Pairings between known Entrants, in the order given, higher Score first. */
+  pairings: Pairing[]
+  violations: Violation[]
+  /** Present only when asked for and the set is complete. */
+  comparison?: Comparison
+  engineVersion: string
+}
+
+export type CheckResult = Failure | CheckSuccess

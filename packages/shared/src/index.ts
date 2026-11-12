@@ -1,5 +1,11 @@
 export type {
+  CheckInput,
+  CheckResult,
+  CheckSuccess,
+  Comparison,
   Constraint,
+  Coverage,
+  LevelComparison,
   PairDownPick,
   Pairing,
   PairingEntrant,

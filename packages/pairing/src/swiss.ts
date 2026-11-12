@@ -1,9 +1,9 @@
-import type { RoundInput, RoundResult } from '@score-keepr/shared'
+import type { Constraint, RoundInput, RoundResult } from '@score-keepr/shared'
 
 import { levelsOf } from './cost.ts'
-import { solveExhaustive } from './exhaustive.ts'
+import { solveExhaustive, type Mates } from './exhaustive.ts'
 import { pairInScoreOrder } from './fallback.ts'
-import { buildField } from './field.ts'
+import { buildField, type Field } from './field.ts'
 import { describeResult } from './result.ts'
 import { parseRoundInput } from './validate.ts'
 
@@ -22,19 +22,8 @@ export function pairRound(input: RoundInput): RoundResult {
 
     const { configuration, round, workLimit } = parsed.input
     const field = buildField(parsed.input)
-    const levels = levelsOf(configuration, field)
-    const best =
-      field.size <= EXHAUSTIVE_SIZE
-        ? solveExhaustive(field.size, levels, workLimit ?? Number.POSITIVE_INFINITY)
-        : undefined
-
-    return describeResult(
-      field,
-      configuration,
-      best ?? pairInScoreOrder(field),
-      round,
-      best !== undefined,
-    )
+    const { mates, proven } = solveField(field, configuration, workLimit)
+    return describeResult(field, configuration, mates, round, proven)
   } catch (error) {
     return {
       ok: false,
@@ -47,4 +36,24 @@ export function pairRound(input: RoundInput): RoundResult {
       ],
     }
   }
+}
+
+/**
+ * The best set of Pairings for a Field, and whether it is proven best. When it cannot be
+ * proven, a quick valid set comes back instead.
+ */
+export function solveField(
+  field: Field,
+  configuration: readonly Constraint[],
+  workLimit: number | undefined,
+): { mates: Mates; proven: boolean } {
+  const best =
+    field.size <= EXHAUSTIVE_SIZE
+      ? solveExhaustive(
+          field.size,
+          levelsOf(configuration, field),
+          workLimit ?? Number.POSITIVE_INFINITY,
+        )
+      : undefined
+  return { mates: best ?? pairInScoreOrder(field), proven: best !== undefined }
 }

@@ -36,7 +36,7 @@ Per Entrant:
 | Fact | Details |
 |---|---|
 | id | String. Unique within the call. Must stay stable across rounds: Shuffle Positions come from it. |
-| Score | Whole number. May be negative. |
+| Score | Whole number from −1,000,000 to 1,000,000. The cap keeps every sum inside the engine exact. |
 | Opponents faced | Ids. May name Entrants not in this call; those are ignored. If A lists B and B is present, B must list A. |
 | Byes received | Whole number, zero or more. Whatever the Consumer chooses to count. Only compared with the bye cap. |
 | Rank | Optional whole number, 1 is best. Required only when a chosen Constraint uses Rank. Shared Ranks are allowed. |
@@ -224,7 +224,11 @@ type CheckResult =
       coverage: { missing: string[]; repeated: string[]; unknown: string[]; byesExpected: number }
       pairings: { entrants: [string, string]; scoreGap: number }[]
       violations: { constraint: string; entrants: string[] }[]
-      comparison?: { provenBest: boolean; constraints: { constraint: string; given: number; best: number }[] }
+      comparison?: {
+        asGoodAsBest: boolean   // exact, whatever the size of the numbers below
+        provenBest: boolean
+        levels: { constraint: Constraint; part?: 'from' | 'opponent'; given: number; best: number }[]
+      }
       engineVersion: string
     }
 ```

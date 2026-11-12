@@ -24,6 +24,9 @@ const INPUT_FIELDS = [
 const ENTRANT_FIELDS = ['id', 'score', 'opponents', 'byes', 'rank', 'groups']
 const PICKS: readonly string[] = ['highest', 'lowest', 'random']
 
+/** Scores beyond this, either way, are refused so that every sum inside the engine stays exact. */
+export const SCORE_LIMIT = 1_000_000
+
 /** The settings each Constraint takes, beyond `type`. */
 const SETTINGS: Record<Constraint['type'], readonly string[]> = {
   'no-rematch': [],
@@ -133,7 +136,9 @@ function parseEntrants(
       sound = false
     }
 
-    if (!isWhole(value['score'], Number.MIN_SAFE_INTEGER)) wrong('`score` must be a whole number.')
+    if (!isWhole(value['score'], -SCORE_LIMIT) || value['score'] > SCORE_LIMIT) {
+      wrong(`\`score\` must be a whole number from -${SCORE_LIMIT} to ${SCORE_LIMIT}.`)
+    }
     if (!isWhole(value['byes'], 0)) wrong('`byes` must be a whole number, 0 or more.')
     if (value['rank'] !== undefined && !isWhole(value['rank'], 1)) {
       wrong('`rank` must be a whole number, 1 or more.')
@@ -328,7 +333,8 @@ function checkRanks(
   }
 }
 
-function compareErrors(a: InputError, b: InputError): number {
+/** Puts errors in an order that does not depend on the order of the input. */
+export function compareErrors(a: InputError, b: InputError): number {
   return (
     compareCodeUnits(a.code, b.code) ||
     compareCodeUnits(a.entrants.join('\u0000'), b.entrants.join('\u0000')) ||

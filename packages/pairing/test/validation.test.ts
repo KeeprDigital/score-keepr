@@ -50,6 +50,12 @@ describe('pairRound input checks', () => {
     ['a numeric id', (i) => (entrants(i)[0]!['id'] = 5), 'invalid-input'],
     ['a fractional Score', (i) => (entrants(i)[0]!['score'] = 1.5), 'invalid-input'],
     ['a Score too large to be exact', (i) => (entrants(i)[0]!['score'] = 2 ** 60), 'invalid-input'],
+    ['a Score above one million', (i) => (entrants(i)[0]!['score'] = 1_000_001), 'invalid-input'],
+    [
+      'a Score below minus one million',
+      (i) => (entrants(i)[0]!['score'] = -1_000_001),
+      'invalid-input',
+    ],
     ['a text Score', (i) => (entrants(i)[0]!['score'] = '3'), 'invalid-input'],
     ['negative Byes', (i) => (entrants(i)[0]!['byes'] = -1), 'invalid-input'],
     ['missing Byes', (i) => delete entrants(i)[0]!['byes'], 'invalid-input'],
@@ -162,6 +168,8 @@ describe('pairRound input checks', () => {
       },
     ],
     ['a negative Score', (i) => (entrants(i)[0]!['score'] = -3)],
+    ['a Score of exactly one million', (i) => (entrants(i)[0]!['score'] = 1_000_000)],
+    ['a Score of exactly minus one million', (i) => (entrants(i)[0]!['score'] = -1_000_000)],
     [
       'a Group Label Constraint for two kinds',
       (i) =>
