@@ -6,7 +6,7 @@ import { findImprovers, findImproversSlowly } from './improvers.ts'
 import { verifyMatching } from './verify.ts'
 
 export type MatchOptions = {
-  /** Give up, returning undefined, after this much work. */
+  /** Give up, returning undefined, after this much work. Left out, the built-in ceiling applies. */
   maxSteps?: number
   /** Fields up to this size are solved with every possible Pairing in the graph. */
   completeUpTo?: number
@@ -14,6 +14,8 @@ export type MatchOptions = {
   neighbours?: number
   /** Check left-out Pairings the plain way, one pair at a time. For comparing with the fast way. */
   plainProof?: boolean
+  /** Filled in with how much work the call took. For measuring, never for deciding anything. */
+  usage?: { steps: number }
 }
 
 /** Same-Score neighbours, by Shuffle Position, that each Entrant is offered. */
@@ -24,6 +26,22 @@ const COMPLETE_UP_TO = 64
 /** The largest field that falls back to every possible Pairing when the sparse graph fails. */
 const COMPLETE_AT_MOST = 3000
 const MOST_ROUNDS = 50
+
+/**
+ * The most work a field of this size is allowed when no limit is given: 50,000 steps, plus 2,000
+ * for each Entrant times the number of binary digits in the count.
+ *
+ * It exists so that a fault inside the matcher can never hang a call: the worst that can
+ * happen is a result marked not proven. It is set far above anything measured. Whole events
+ * of up to 20,001 Entrants, including ones run long enough to force rematches, stay under a
+ * twentieth of it; the heaviest case found, pairing by Rank with an odd count and no Bye rule,
+ * reaches a fifth.
+ *
+ * Whole-number arithmetic only, so it is the same on every machine.
+ */
+export function workCeiling(entrants: number): number {
+  return 50_000 + 2_000 * entrants * (32 - Math.clz32(entrants))
+}
 
 /**
  * The best set of Pairings for a Field, proven best, or undefined when it could not be proven
@@ -44,7 +62,7 @@ export function solveByMatching(
   const BYE = n
   const N = odd ? n + 1 : n
   const K = levels.length
-  const maxSteps = options.maxSteps ?? Number.POSITIVE_INFINITY
+  const maxSteps = options.maxSteps ?? workCeiling(n)
   let steps = 0
 
   const weightInto = (out: Float64Array, at: number, a: number, b: number): void => {
@@ -72,6 +90,7 @@ export function solveByMatching(
     const solution = solveMatching(graph, maxSteps - steps)
     if (solution === undefined) return undefined
     steps += solution.steps
+    if (options.usage !== undefined) options.usage.steps = steps
 
     if (!solution.perfect) {
       // The sparse graph was too thin to pair everyone. Offer more, then everything.
@@ -95,6 +114,7 @@ export function solveByMatching(
       50 * N,
     )
     steps += n
+    if (options.usage !== undefined) options.usage.steps = steps
     if (steps > maxSteps) return undefined
     if (improvers.length === 0) return matesOf(solution, n, BYE)
     for (const key of improvers) edges.add(key)

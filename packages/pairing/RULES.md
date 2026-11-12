@@ -71,5 +71,6 @@ With no Constraint in play this is "shuffle, then pair neighbours".
 - One call can hold at most 262,144 Entrants, a quarter of the Shuffle Positions there are.
 - Those two limits keep the score of every Pairing an exact number.
 - Fields of up to 8 Entrants are solved by trying every set of Pairings.
+- With no work limit given, a field is allowed 50,000 steps plus 2,000 for each Entrant times the number of binary digits in the count.
 - Larger fields are solved by the matcher, which carries a proof that is checked on every call. If the proof cannot be completed, or the work limit is hit, a simple pairing in Score order comes back instead, marked not proven.
 - If two sets of Pairings tie on every level, the engine's choice is fixed for a given version but is not defined here. With distinct positions this is not expected to happen.

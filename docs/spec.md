@@ -51,7 +51,7 @@ Per call:
 | Random Seed | String. Required. |
 | Round number | Feeds Shuffle Positions and is echoed back. Nothing else depends on it. |
 | Pairs to avoid | Pairs of ids. Used by "avoid listed pairs". |
-| Work limit | Optional, counted in steps, never in time. |
+| Work limit | Optional, counted in steps, never in time. Left out, a built-in ceiling applies. |
 
 Constraints that apply only in some rounds (club avoidance in rounds one and two only, pair by Rank in the last round) are the Consumer sending a different Configuration for that call.
 
@@ -116,6 +116,8 @@ A result holds:
 - The round number and the engine version.
 
 "Proven best" means no other set of Pairings does better under the priority order (ADR 0004). A proven Violation count is the lowest possible given every higher Constraint. It does not mean those particular Entrants had to be the ones.
+
+**The built-in ceiling.** With no work limit given, a field is allowed 50,000 steps plus 2,000 for each Entrant times the number of binary digits in the count. It exists so a fault inside the matcher can never hang a call; the worst outcome is a result marked not proven. Every loop in the matcher that could run away counts a step. It is far above anything measured: whole events of up to 20,001 Entrants stay under a twentieth of it, and the heaviest case found reaches a fifth. A Consumer who wants more, or less, passes a work limit.
 
 If the work limit is hit, the engine still returns a complete, valid set of Pairings, made by a quick simple method and marked not proven. Its Violations are listed but not claimed to be unavoidable. The Consumer handles real timeouts by running the engine in a worker and killing it.
 

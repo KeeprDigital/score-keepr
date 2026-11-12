@@ -130,6 +130,27 @@ describe('solveMatching', () => {
     expect(solveMatching(graphOf(4, 1, edges), 0)).toBeUndefined()
   })
 
+  test('given less work than it needs, it stops and says so; given enough, the answer is the same', () => {
+    fc.assert(
+      fc.property(
+        anyGraph,
+        fc.integer({ min: 0, max: 400 }),
+        ({ size, levels, edges }, allowed) => {
+          const graph = graphOf(size, levels, edges)
+          const unlimited = solveMatching(graph)
+          const limited = solveMatching(graph, allowed)
+          // Either it ran out, or it finished and agrees exactly with the unlimited run.
+          expect(limited === undefined || limited.steps <= allowed).toBe(true)
+          expect(limited === undefined ? [] : [...limited.partner]).toEqual(
+            limited === undefined ? [] : [...(unlimited?.partner ?? [])],
+          )
+          expect((unlimited?.steps ?? 0) > allowed).toBe(limited === undefined)
+        },
+      ),
+      { numRuns: 2000 },
+    )
+  })
+
   test('finds a perfect matching exactly when one exists, and it is the heaviest', () => {
     fc.assert(
       fc.property(anyGraph, ({ size, levels, edges }) => {

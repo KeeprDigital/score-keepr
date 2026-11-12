@@ -112,14 +112,29 @@ class RowHeap {
   }
 }
 
+/** Thrown from inside the search when the work allowed runs out. Never leaves this module. */
+const OUT_OF_STEPS: { readonly reason: string } = { reason: 'the work allowed has run out' }
+
 /**
  * Finds the heaviest perfect matching, or reports that there is none. Returns undefined if it
  * would take more than `maxSteps` steps.
+ *
+ * Every loop that is not bounded by its own counter counts a step each time round. So with a
+ * finite `maxSteps` the search always ends, even if something inside it has gone wrong.
  */
 export function solveMatching(
   graph: MatchingGraph,
   maxSteps: number = Number.POSITIVE_INFINITY,
 ): MatchingSolution | undefined {
+  try {
+    return search(graph, maxSteps)
+  } catch (thrown) {
+    if (thrown === OUT_OF_STEPS) return undefined
+    throw thrown
+  }
+}
+
+function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
   const N = graph.size
   const K = graph.levels
   const EI = graph.from
@@ -189,7 +204,10 @@ export function solveMatching(
   let touchedB: number[] = []
   const tmp = new Float64Array(K)
   let steps = 0
-  let stopped = false
+  /** Counts one step, and stops the search when the work allowed runs out. */
+  const tick = (): void => {
+    if (++steps > maxSteps) throw OUT_OF_STEPS
+  }
 
   const finish = (perfect: boolean): MatchingSolution => {
     const partner = new Int32Array(N).fill(-1)
@@ -229,6 +247,7 @@ export function solveMatching(
     }
     const stack = [b]
     while (stack.length > 0) {
+      tick()
       const childs = blossomchilds[stack.pop()!]!
       for (let i = 0; i < childs.length; i++) {
         const child = childs[i]!
@@ -294,6 +313,7 @@ export function solveMatching(
     const path: number[] = []
     let base = -1
     while (v !== -1 || w !== -1) {
+      tick()
       let b = inblossom[v]!
       if (label[b]! & 4) {
         base = blossombase[b]!
@@ -330,6 +350,7 @@ export function solveMatching(
     const path: number[] = []
     const endps: number[] = []
     while (bv !== bb) {
+      tick()
       blossomparent[bv] = b
       path.push(bv)
       endps.push(labelend[bv]!)
@@ -341,6 +362,7 @@ export function solveMatching(
     endps.reverse()
     endps.push(2 * k)
     while (bw !== bb) {
+      tick()
       blossomparent[bw] = b
       path.push(bw)
       endps.push(labelend[bw]! ^ 1)
@@ -457,6 +479,7 @@ export function solveMatching(
     }
     let p = labelend[b]!
     while (j !== 0) {
+      tick()
       label[endpoint[p ^ 1]!] = 0
       label[endpoint[at(endps, j - endptrick) ^ endptrick ^ 1]!] = 0
       labelT(endpoint[p ^ 1]!, p)
@@ -483,6 +506,7 @@ export function solveMatching(
     }
     j += jstep
     while (at(childs, j) !== entrychild) {
+      tick()
       bv = at(childs, j)
       if (label[bv] === 1) {
         j += jstep
@@ -525,12 +549,14 @@ export function solveMatching(
   function augmentBlossom(b: number, v: number): void {
     pending.push(b, v)
     while (pending.length > 0) {
+      tick()
       const vertex = pending.pop()!
       const blossom = pending.pop()!
       // From the vertex outwards, turn each blossom so the child holding the vertex comes first.
       // Inner ones go first: an outer blossom takes its base from its first child.
       let child = vertex
       while (child !== blossom) {
+        tick()
         const parent = blossomparent[child]!
         rotateBlossom(parent, child)
         child = parent
@@ -561,6 +587,7 @@ export function solveMatching(
       endptrick = 1
     }
     while (j !== 0) {
+      tick()
       j += jstep
       let t = at(childs, j)
       const p = at(endps, j - endptrick) ^ endptrick
@@ -584,6 +611,7 @@ export function solveMatching(
     let s = v
     let q = p
     for (;;) {
+      tick()
       const bs = inblossom[s]!
       if (bs >= N) augmentBlossom(bs, s)
       mate[s] = q
@@ -605,10 +633,7 @@ export function solveMatching(
     labelS(root, -1)
     for (;;) {
       while (qh < qt) {
-        if (++steps > maxSteps) {
-          stopped = true
-          return false
-        }
+        tick()
         const v = queue[qh++]!
         const ov = v * K
         for (let a = adjStart[v]!, end = adjStart[v + 1]!; a < end; a++) {
@@ -673,16 +698,14 @@ export function solveMatching(
         }
       }
 
-      if (++steps > maxSteps) {
-        stopped = true
-        return false
-      }
+      tick()
 
       // Next event: the smallest offset at which something becomes tight.
       let t2 = -1
       let t3 = -1
       let t4 = -1
       while (H2.count > 0) {
+        tick()
         const k = H2.peek()
         let i = EI[k]!
         let j = EJ[k]!
@@ -737,6 +760,7 @@ export function solveMatching(
         break
       }
       while (H3.count > 0) {
+        tick()
         const k = H3.peek()
         if (inblossom[EI[k]!] === inblossom[EJ[k]!]) H3.pop()
         else {
@@ -745,6 +769,7 @@ export function solveMatching(
         }
       }
       while (H4.count > 0) {
+        tick()
         const b = H4.peek()
         if (blossombase[b]! < 0 || blossomparent[b] !== -1 || label[b] !== 2) H4.pop()
         else {
@@ -880,7 +905,7 @@ export function solveMatching(
   }
   const least = new Float64Array(K)
   for (let v = 0; v < N; v++) {
-    if (++steps > maxSteps) return undefined
+    tick()
     if (mate[v] !== -1) continue
     let bestEnd = -1
     const ov = v * K
@@ -916,7 +941,6 @@ export function solveMatching(
     if (mate[root] !== -1) continue
     const matched = stage(root)
     endStage()
-    if (stopped) return undefined
     if (!matched) return finish(false)
   }
   return finish(true)
