@@ -34,17 +34,17 @@ export const configurations: Record<string, StandingsConfiguration> = {
     points: { type: 'by-outcome', win: 1, draw: 0, loss: 0 },
     bye: { points: 1, games: [0, 0, 0], countsAsPlayed: true },
     tiebreakers: [
-      { type: 'score-total', score: 'vp', of: 'difference' },
-      { type: 'score-total', score: 'vp', of: 'for' },
-      { type: 'score-total', score: 'vp', of: 'against' },
+      { type: 'extra-score-total', extraScore: 'vp', of: 'difference' },
+      { type: 'extra-score-total', extraScore: 'vp', of: 'for' },
+      { type: 'extra-score-total', extraScore: 'vp', of: 'against' },
     ],
   },
   /** Twenty points shared by how far apart the two sides are on victory points. */
   'twenty-nil': {
     ...base,
     points: {
-      type: 'by-score-difference',
-      score: 'vp',
+      type: 'by-extra-score-difference',
+      extraScore: 'vp',
       bands: [
         { upTo: 5, higher: 10, lower: 10 },
         { upTo: 10, higher: 11, lower: 9 },
@@ -57,7 +57,7 @@ export const configurations: Record<string, StandingsConfiguration> = {
   /** Score is total victory points. */
   'points-are-vp': {
     ...base,
-    points: { type: 'by-score', score: 'vp' },
+    points: { type: 'by-extra-score', extraScore: 'vp' },
     bye: { points: 50, games: [0, 0, 0], countsAsPlayed: true },
   },
   /** Two-game matches: 2-0 earns 7, a 1-1 split earns 3 each, a 1-0 with a draw earns 4 and 1. */

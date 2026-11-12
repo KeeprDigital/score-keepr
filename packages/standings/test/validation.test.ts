@@ -171,6 +171,22 @@ describe('computeStandings input checks', () => {
       'missing-setting',
     ],
     ['an unknown field on the Configuration', (i) => (config(i)['name'] = 'mine'), 'unknown-field'],
+    // Names used before the vocabulary was settled. None is kept as an alias.
+    [
+      'a points method from an Extra Score under its old name',
+      (i) => (config(i)['points'] = { type: 'by-score', extraScore: 'vp' }),
+      'invalid-input',
+    ],
+    [
+      'the Extra Score total under its old name',
+      (i) => (config(i)['tiebreakers'] = [{ type: 'score-total', extraScore: 'vp', of: 'for' }]),
+      'unknown-tiebreaker',
+    ],
+    [
+      'an Extra Score named under the old field',
+      (i) => (config(i)['tiebreakers'] = [{ type: 'extra-score-total', score: 'vp', of: 'for' }]),
+      'unknown-field',
+    ],
     [
       'an unknown points method',
       (i) => (config(i)['points'] = { type: 'by-vibes' }),
@@ -244,13 +260,16 @@ describe('computeStandings input checks', () => {
       'missing-setting',
     ],
     [
-      'a score total that does not say which way',
-      (i) => (config(i)['tiebreakers'] = [{ type: 'score-total', score: 'vp' }]),
+      'an Extra Score total that does not say which way',
+      (i) => (config(i)['tiebreakers'] = [{ type: 'extra-score-total', extraScore: 'vp' }]),
       'missing-setting',
     ],
     [
-      'a score total of something unknown',
-      (i) => (config(i)['tiebreakers'] = [{ type: 'score-total', score: 'vp', of: 'average' }]),
+      'an Extra Score total of something unknown',
+      (i) =>
+        (config(i)['tiebreakers'] = [
+          { type: 'extra-score-total', extraScore: 'vp', of: 'average' },
+        ]),
       'invalid-input',
     ],
   ])('rejects %s', (_, change, code) => {
@@ -292,16 +311,16 @@ describe('computeStandings input checks', () => {
       'unlisted-game-score',
     ],
     [
-      'a named score missing when a Tiebreaker reads it',
+      'an Extra Score missing when a Tiebreaker reads it',
       { ...valid(), configuration: configurations['wargame'] as never },
       () => undefined,
-      'missing-score',
+      'missing-extra-score',
     ],
     [
-      'a named score missing when points come from it',
+      'an Extra Score missing when points come from it',
       { ...valid(), configuration: configurations['points-are-vp'] as never },
       () => undefined,
-      'missing-score',
+      'missing-extra-score',
     ],
     [
       'no planned rounds when a win rate counts them',

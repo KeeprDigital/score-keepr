@@ -38,7 +38,7 @@ const TIEBREAKER_SETTINGS: Record<Tiebreaker['type'], readonly string[]> = {
   'opponents-loss-rate': ['withNoOpponents'],
   wins: ['includeByes'],
   'game-wins': ['includeByes'],
-  'score-total': ['score', 'of'],
+  'extra-score-total': ['extraScore', 'of'],
   'later-losses': [],
   'head-to-head': [],
   random: [],
@@ -410,12 +410,12 @@ function parsePoints(raw: unknown, fields: FieldsOf, wrong: Wrong): PointsMethod
         ),
       }
     }
-    case 'by-score-difference': {
-      fields(raw, '`points`', ['type', 'score', 'bands'])
+    case 'by-extra-score-difference': {
+      fields(raw, '`points`', ['type', 'extraScore', 'bands'])
       const bands = raw['bands']
-      if (raw['score'] === undefined || bands === undefined) return undefined
+      if (raw['extraScore'] === undefined || bands === undefined) return undefined
       const shaped =
-        isText(raw['score']) &&
+        isText(raw['extraScore']) &&
         Array.isArray(bands) &&
         bands.length > 0 &&
         bands.every(
@@ -449,23 +449,23 @@ function parsePoints(raw: unknown, fields: FieldsOf, wrong: Wrong): PointsMethod
         return undefined
       }
       return {
-        type: 'by-score-difference',
-        score: raw['score'] as string,
+        type: 'by-extra-score-difference',
+        extraScore: raw['extraScore'] as string,
         bands: list.map((band) => ({ ...band })),
       }
     }
-    case 'by-score': {
-      fields(raw, '`points`', ['type', 'score'])
-      if (raw['score'] === undefined) return undefined
-      if (!isText(raw['score'])) {
-        wrong('`points.score` must name an extra score.')
+    case 'by-extra-score': {
+      fields(raw, '`points`', ['type', 'extraScore'])
+      if (raw['extraScore'] === undefined) return undefined
+      if (!isText(raw['extraScore'])) {
+        wrong('`points.extraScore` must name an Extra Score.')
         return undefined
       }
-      return { type: 'by-score', score: raw['score'] }
+      return { type: 'by-extra-score', extraScore: raw['extraScore'] }
     }
     default:
       wrong(
-        '`points.type` must be "by-outcome", "by-game-score", "by-score-difference" or "by-score".',
+        '`points.type` must be "by-outcome", "by-game-score", "by-extra-score-difference" or "by-extra-score".',
       )
       return undefined
   }
@@ -627,13 +627,15 @@ function parseTiebreaker(
       const includeByes = flag('includeByes')
       return includeByes === undefined ? undefined : { type: known, includeByes }
     }
-    case 'score-total': {
-      const { score, of } = raw
-      if (!isText(score) || (of !== 'for' && of !== 'against' && of !== 'difference')) {
-        wrong(`${where} needs a \`score\` name and \`of\` set to "for", "against" or "difference".`)
+    case 'extra-score-total': {
+      const { extraScore, of } = raw
+      if (!isText(extraScore) || (of !== 'for' && of !== 'against' && of !== 'difference')) {
+        wrong(
+          `${where} needs an \`extraScore\` name and \`of\` set to "for", "against" or "difference".`,
+        )
         return undefined
       }
-      return { type: known, score, of }
+      return { type: known, extraScore, of }
     }
     default:
       return { type: known }
@@ -652,10 +654,10 @@ function checkAgainstConfiguration(
     points.type === 'by-game-score' ||
     tiebreakers.some((tiebreaker) => USES_GAMES.includes(tiebreaker.type))
   const scoreNames = new Set<string>()
-  if (points.type === 'by-score-difference' || points.type === 'by-score')
-    scoreNames.add(points.score)
+  if (points.type === 'by-extra-score-difference' || points.type === 'by-extra-score')
+    scoreNames.add(points.extraScore)
   for (const tiebreaker of tiebreakers)
-    if (tiebreaker.type === 'score-total') scoreNames.add(tiebreaker.score)
+    if (tiebreaker.type === 'extra-score-total') scoreNames.add(tiebreaker.extraScore)
 
   for (const result of results) {
     if ('entrant' in result) continue
@@ -691,7 +693,7 @@ function checkAgainstConfiguration(
     for (const name of scoreNames) {
       if (result.extraScores?.[name] === undefined) {
         problem(
-          'missing-score',
+          'missing-extra-score',
           `${where}: the Configuration uses the Extra Score "${name}", and this Result does not have it.`,
           both,
         )

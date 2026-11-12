@@ -32,8 +32,8 @@ Every number here is exact. Fractions are kept as fractions and never rounded.
 |---|---|
 | `by-outcome` | the stated value for its win, draw or loss |
 | `by-game-score` | the value listed for its own games won, lost and drawn. A game score that is not listed is an input error |
-| `by-score-difference` | found from how far apart the two sides are on a named score. The first band whose `upTo` is not below the difference applies. The side that is ahead, or level, gets `higher`; the other gets `lower` |
-| `by-score` | its own named score |
+| `by-extra-score-difference` | found from how far apart the two sides are on an Extra Score. The first band whose `upTo` is not below the difference applies. The side that is ahead, or level, gets `higher`; the other gets `lower` |
+| `by-extra-score` | its own Extra Score |
 
 ## Tiebreakers
 
@@ -59,7 +59,7 @@ Higher is better unless stated.
 | `opponents-loss-rate` | the average of the loss rate of each opponent faced. **Lower is better** |
 | `wins` | wins in Results with two Entrants, plus Byes when `includeByes` is set |
 | `game-wins` | games won in Results with two Entrants, plus the Bye's games won for each Bye when `includeByes` is set |
-| `score-total` | a named score added up: scored `for`, scored `against` (**lower is better**), or the `difference` |
+| `extra-score-total` | an Extra Score added up: scored `for`, scored `against` (**lower is better**), or the `difference` |
 | `later-losses` | the round number of each loss, squared, added up |
 
 Averages over opponents:

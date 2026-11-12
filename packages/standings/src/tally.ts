@@ -53,8 +53,8 @@ export function pointsFor(points: PointsMethod, result: MatchResult, side: 0 | 1
       )
       return (row as { points: number }).points
     }
-    case 'by-score-difference': {
-      const scores = result.extraScores?.[points.score] as [number, number]
+    case 'by-extra-score-difference': {
+      const scores = result.extraScores?.[points.extraScore] as [number, number]
       const difference = Math.abs(scores[0] - scores[1])
       const band = points.bands.find((each) => each.upTo === null || difference <= each.upTo) as {
         higher: number
@@ -62,8 +62,8 @@ export function pointsFor(points: PointsMethod, result: MatchResult, side: 0 | 1
       }
       return scores[side] >= scores[other] ? band.higher : band.lower
     }
-    case 'by-score': {
-      const scores = result.extraScores?.[points.score] as [number, number]
+    case 'by-extra-score': {
+      const scores = result.extraScores?.[points.extraScore] as [number, number]
       return scores[side]
     }
   }
