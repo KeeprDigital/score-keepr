@@ -20,10 +20,10 @@ export function solveExhaustive(
   const pairCost: bigint[][][] = []
   const byeCost: bigint[][] = []
   for (let a = 0; a < size; a++) {
-    byeCost.push(levels.map((level) => level.bye(a)))
+    byeCost.push(levels.map((level) => BigInt(level.bye(a))))
     const row: bigint[][] = []
     for (let b = 0; b < size; b++) {
-      row.push(b > a ? levels.map((level) => level.pair(a, b)) : [])
+      row.push(b > a ? levels.map((level) => BigInt(level.pair(a, b))) : [])
     }
     pairCost.push(row)
   }

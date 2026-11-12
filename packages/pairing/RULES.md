@@ -53,7 +53,7 @@ Each scores 1 when broken and 0 otherwise. A broken one is reported as a Violati
 
 The last level, always.
 
-- Each Entrant gets a whole number from 0 to 2³² − 1: the first 32 bits of the SHA-256 of `"shuffle"`, the Random Seed, the round number, the Entrant's id and an attempt number starting at 0. Each part is written as its length in bytes then its UTF-8 bytes.
+- Each Entrant gets a whole number from 0 to 2²⁰ − 1: the first 20 bits of the SHA-256 of `"shuffle"`, the Random Seed, the round number, the Entrant's id and an attempt number starting at 0. Each part is written as its length in bytes then its UTF-8 bytes.
 - Positions are made distinct. Entrants are taken in order of id; one whose position is already held tries the next attempt number.
 - A Pairing scores the difference between the two positions, squared. The Bye scores the Entrant's position, squared.
 
@@ -68,6 +68,8 @@ With no Constraint in play this is "shuffle, then pair neighbours".
 ## Limits today
 
 - A Score must be a whole number from −1,000,000 to 1,000,000.
+- One call can hold at most 262,144 Entrants, a quarter of the Shuffle Positions there are.
+- Those two limits keep the score of every Pairing an exact number.
 - Fields of up to 14 Entrants are solved by trying every set of Pairings, and are proven best.
 - Larger fields get a simple pairing in Score order, marked not proven, until the fast matcher is built.
-- If two sets of Pairings tie on every level, the engine's choice is fixed for a given version but is not defined here. With distinct 32-bit positions this is not expected to happen.
+- If two sets of Pairings tie on every level, the engine's choice is fixed for a given version but is not defined here. With distinct positions this is not expected to happen.

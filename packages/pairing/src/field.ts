@@ -11,7 +11,7 @@ export type Field = {
   byes: number[]
   rank: (number | undefined)[]
   groups: (Record<string, string> | undefined)[]
-  /** Shuffle Position: a distinct whole number below 2^32 for each Entrant. */
+  /** Shuffle Position: a distinct whole number below 2^20 for each Entrant. */
   position: number[]
   /** For each Entrant, the present Entrants they have already faced. */
   faced: Set<number>[]
@@ -22,10 +22,17 @@ export type Field = {
   everyoneRanked: boolean
 }
 
+/** Shuffle Positions are this wide, so the square of any difference is an exact number. */
+export const POSITION_BITS = 20
+
+/** The most Entrants one call can hold, leaving Shuffle Positions plenty of room. */
+export const MAX_ENTRANTS: number = 2 ** POSITION_BITS / 4
+
 export function buildField(input: RoundInput): Field {
   const positions = distinctPositions(
     ['shuffle', input.randomSeed, String(input.round)],
     input.entrants.map((entrant) => entrant.id),
+    POSITION_BITS,
   )
   const entrants = [...input.entrants].sort(
     (a, b) => (positions.get(a.id) as number) - (positions.get(b.id) as number),

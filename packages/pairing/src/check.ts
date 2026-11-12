@@ -112,8 +112,8 @@ export function checkPairings(input: CheckInput): CheckResult {
       let asGoodAsBest = true
       const levels = constraintLevels(configuration, field).map(({ constraint, part, level }) => {
         const total = (somePairs: [number, number][], someByes: number[]): bigint =>
-          somePairs.reduce((sum, [a, b]) => sum + level.pair(a, b), 0n) +
-          someByes.reduce((sum, a) => sum + level.bye(a), 0n)
+          somePairs.reduce((sum, [a, b]) => sum + BigInt(level.pair(a, b)), 0n) +
+          someByes.reduce((sum, a) => sum + BigInt(level.bye(a)), 0n)
         const given = total(pairs, byeNumbers)
         const best = total(bestPairs, bestByes)
         if (given !== best) asGoodAsBest = false

@@ -47,14 +47,23 @@ export function assignDistinct(
 }
 
 /**
- * A distinct whole number from 0 to 2^32 - 1 for each id, fixed by `scope` and the id alone
+ * A distinct whole number from 0 to 2^bits - 1 for each id, fixed by `scope` and the id alone
  * unless two ids clash, in which case the later id in sorted order moves on.
+ *
+ * There must be room: at most a quarter as many ids as there are positions.
  */
 export function distinctPositions(
   scope: readonly string[],
   ids: readonly string[],
+  bits: number,
 ): Map<string, number> {
-  return assignDistinct(ids, (id, attempt) => seededUint32([...scope, id, String(attempt)]))
+  if (!Number.isInteger(bits) || bits < 1 || bits > 32) throw new Error('bits must be from 1 to 32')
+  if (ids.length > 2 ** bits / 4) throw new Error('too many ids for this many bits')
+  const drop = 32 - bits
+  return assignDistinct(
+    ids,
+    (id, attempt) => seededUint32([...scope, id, String(attempt)]) >>> drop,
+  )
 }
 
 /** Orders strings by UTF-16 code unit, the same on every machine and in every locale. */

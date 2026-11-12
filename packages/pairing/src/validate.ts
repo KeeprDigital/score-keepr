@@ -8,6 +8,8 @@ import {
   type RoundInput,
 } from '@score-keepr/shared'
 
+import { MAX_ENTRANTS } from './field.ts'
+
 type Parsed = { ok: true; input: RoundInput } | Failure
 
 type Fields = Record<string, unknown>
@@ -85,6 +87,9 @@ export function parseRoundInput(raw: unknown): Parsed {
   const configuration = parseConfiguration(raw['configuration'], problem, unknownFields)
   const avoidPairs = parseAvoidPairs(raw['avoidPairs'], problem)
 
+  if (entrants.length > MAX_ENTRANTS) {
+    problem('too-many-entrants', `One call can hold at most ${MAX_ENTRANTS} Entrants.`)
+  }
   checkHistory(entrants, problem)
   checkRanks(entrants, configuration, problem)
 

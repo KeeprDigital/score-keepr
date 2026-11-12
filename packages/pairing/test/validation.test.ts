@@ -191,6 +191,18 @@ describe('pairRound input checks', () => {
     expect(codes(change)).toEqual([])
   })
 
+  test('refuses more Entrants than Shuffle Positions have room for', () => {
+    const input = valid()
+    input.configuration = []
+    input.entrants = Array.from({ length: 262_145 }, (_, at) => ({
+      id: `e${at}`,
+      score: 0,
+      opponents: [],
+      byes: 0,
+    }))
+    expect(mustFail(input)).toEqual([expect.objectContaining({ code: 'too-many-entrants' })])
+  })
+
   test('reports every problem at once, each with the Entrants involved', () => {
     const input = valid()
     input.entrants.push({ id: 'ann', score: 0, opponents: [], byes: 0 })

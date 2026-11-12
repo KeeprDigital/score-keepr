@@ -62,8 +62,8 @@ describe('distinctPositions', () => {
             .map((id) => ({ id, key: noise.next().value }))
             .sort((a, b) => a.key - b.key)
             .map((entry) => entry.id)
-          expect(distinctPositions(['t', seed], shuffled)).toEqual(
-            distinctPositions(['t', seed], ids),
+          expect(distinctPositions(['t', seed], shuffled, 20)).toEqual(
+            distinctPositions(['t', seed], ids, 20),
           )
         },
       ),
@@ -73,16 +73,47 @@ describe('distinctPositions', () => {
   test('gives every id its own position', () => {
     fc.assert(
       fc.property(fc.uniqueArray(fc.string(), { maxLength: 60 }), (ids) => {
-        const positions = distinctPositions(['t'], ids)
+        const positions = distinctPositions(['t'], ids, 20)
         expect(positions.size).toBe(ids.length)
         expect(new Set(positions.values()).size).toBe(ids.length)
       }),
     )
   })
 
+  test('keeps every position inside the width asked for', () => {
+    fc.assert(
+      fc.property(
+        fc.uniqueArray(fc.string(), { maxLength: 30 }),
+        fc.integer({ min: 7, max: 32 }),
+        (ids, bits) => {
+          const positions = [...distinctPositions(['t'], ids, bits).values()]
+          expect(
+            positions.every(
+              (position) => Number.isInteger(position) && position >= 0 && position < 2 ** bits,
+            ),
+          ).toBe(true)
+          expect(new Set(positions).size).toBe(ids.length)
+        },
+      ),
+    )
+  })
+
+  test('stays distinct when the width is tight', () => {
+    const ids = Array.from({ length: 64 }, (_, at) => `id-${at}`)
+    expect(new Set(distinctPositions(['t'], ids, 8).values()).size).toBe(64)
+  })
+
+  test('refuses when there is not enough room', () => {
+    const ids = Array.from({ length: 65 }, (_, at) => `id-${at}`)
+    expect(() => distinctPositions(['t'], ids, 8)).toThrow(/too many/)
+    expect(() => distinctPositions(['t'], [], 0)).toThrow(/bits/)
+  })
+
   test('changes with the scope', () => {
     const ids = ['ann', 'ben', 'cal']
-    expect(distinctPositions(['s', '1'], ids)).not.toEqual(distinctPositions(['s', '2'], ids))
+    expect(distinctPositions(['s', '1'], ids, 20)).not.toEqual(
+      distinctPositions(['s', '2'], ids, 20),
+    )
   })
 
   test('resolves clashes the same way whatever the order', () => {

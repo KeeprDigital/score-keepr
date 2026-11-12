@@ -5,15 +5,18 @@ import type { Field } from './field.ts'
 /**
  * One level of the priority order. Every level scores a Pairing or a Bye on its own, as a whole
  * number that is never negative, and lower is better. A set of Pairings scores the sum.
+ *
+ * Every score is small enough to be an exact number: Scores are capped and Shuffle Positions
+ * are 20 bits wide. Sums over a whole field can be larger, so they are added as bigints.
  */
 export type Level = {
-  pair(a: number, b: number): bigint
-  bye(a: number): bigint
+  pair(a: number, b: number): number
+  bye(a: number): number
 }
 
-const NONE = (): bigint => 0n
-const square = (value: bigint): bigint => value * value
-const flag = (broken: boolean): bigint => (broken ? 1n : 0n)
+const NONE = (): number => 0
+const square = (value: number): number => value * value
+const flag = (broken: boolean): number => (broken ? 1 : 0)
 
 /** True when Pairing `a` with `b`, or giving `a` the Bye, breaks a yes-or-no Constraint. */
 export type Breaks = {
@@ -82,7 +85,7 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
     return [{ pair: (a, b) => flag(breaks.pair(a, b)), bye: (a) => flag(breaks.bye(a)) }]
   }
 
-  const score = (a: number): bigint => BigInt(field.score[a] as number)
+  const score = (a: number): number => field.score[a] as number
   const pairDown = (a: number, b: number): boolean => field.score[a] !== field.score[b]
 
   switch (constraint.type) {
@@ -98,30 +101,24 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
         },
       ]
     case 'bye-to-lowest-score':
-      return [{ pair: NONE, bye: (a) => score(a) - BigInt(field.minScore) }]
+      return [{ pair: NONE, bye: (a) => score(a) - field.minScore }]
     case 'bye-to-lowest-rank': {
       const worse = countWorseRanked(field)
-      return [{ pair: NONE, bye: (a) => BigInt(worse[a] as number) }]
+      return [{ pair: NONE, bye: (a) => worse[a] as number }]
     }
     case 'pair-close-in-score':
       return [{ pair: (a, b) => square(score(a) - score(b)), bye: NONE }]
     case 'keep-top-clean':
       return [
         {
-          pair: (a, b) =>
-            pairDown(a, b)
-              ? (score(a) > score(b) ? score(a) : score(b)) - BigInt(field.minScore) + 1n
-              : 0n,
+          pair: (a, b) => (pairDown(a, b) ? Math.max(score(a), score(b)) - field.minScore + 1 : 0),
           bye: NONE,
         },
       ]
     case 'keep-bottom-clean':
       return [
         {
-          pair: (a, b) =>
-            pairDown(a, b)
-              ? BigInt(field.maxScore) - (score(a) < score(b) ? score(a) : score(b)) + 1n
-              : 0n,
+          pair: (a, b) => (pairDown(a, b) ? field.maxScore - Math.min(score(a), score(b)) + 1 : 0),
           bye: NONE,
         },
       ]
@@ -129,7 +126,7 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
       const place = countBetterRanked(field)
       return [
         {
-          pair: (a, b) => square(BigInt((place[a] as number) - (place[b] as number))),
+          pair: (a, b) => square((place[a] as number) - (place[b] as number)),
           bye: NONE,
         },
       ]
@@ -139,7 +136,7 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
       const mirror = field.size - 1
       return [
         {
-          pair: (a, b) => square(BigInt((place[a] as number) + (place[b] as number) - mirror)),
+          pair: (a, b) => square((place[a] as number) + (place[b] as number) - mirror),
           bye: NONE,
         },
       ]
@@ -152,8 +149,8 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
       const lower = (a: number, b: number): number =>
         (field.score[a] as number) > (field.score[b] as number) ? b : a
       return [
-        { pair: (a, b) => (pairDown(a, b) ? from(higher(a, b)) : 0n), bye: NONE },
-        { pair: (a, b) => (pairDown(a, b) ? opponent(lower(a, b)) : 0n), bye: NONE },
+        { pair: (a, b) => (pairDown(a, b) ? from(higher(a, b)) : 0), bye: NONE },
+        { pair: (a, b) => (pairDown(a, b) ? opponent(lower(a, b)) : 0), bye: NONE },
       ]
     }
     default:
@@ -163,7 +160,7 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
 
 /** Shuffle Positions: prefer Pairings between near neighbours, and a Bye near position zero. */
 function shuffleLevel(field: Field): Level {
-  const position = (a: number): bigint => BigInt(field.position[a] as number)
+  const position = (a: number): number => field.position[a] as number
   return {
     pair: (a, b) => square(position(a) - position(b)),
     bye: (a) => square(position(a)),
@@ -181,7 +178,7 @@ function countWorseRanked(field: Field): number[] {
 }
 
 /** How far an Entrant is from being the one a Pair-down should pick from their Score Group. */
-function pickCost(pick: PairDownPick, field: Field): (a: number) => bigint {
+function pickCost(pick: PairDownPick, field: Field): (a: number) => number {
   if (pick === 'random') return NONE
   const cost = field.rank.map((mine, a) => {
     let ahead = 0
@@ -190,9 +187,9 @@ function pickCost(pick: PairDownPick, field: Field): (a: number) => bigint {
       const theirs = rankOf(field.rank[other])
       if (pick === 'highest' ? theirs < rankOf(mine) : theirs > rankOf(mine)) ahead++
     }
-    return BigInt(ahead)
+    return ahead
   })
-  return (a) => cost[a] as bigint
+  return (a) => cost[a] as number
 }
 
 // Validation guarantees a Rank wherever a chosen Constraint reads one.
