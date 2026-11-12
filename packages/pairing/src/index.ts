@@ -1,5 +1,15 @@
-import { seededUint32 } from '@score-keepr/shared'
-
-// Placeholder: proves the workspace wiring. Replace with the first real export.
-export const packageName = '@score-keepr/pairing'
-export const wired: boolean = typeof seededUint32 === 'function'
+export type {
+  Constraint,
+  EntrantId,
+  Failure,
+  InputError,
+  PairDownPick,
+  Pairing,
+  PairingEntrant,
+  RoundInput,
+  RoundResult,
+  RoundSuccess,
+  Violation,
+} from '@score-keepr/shared'
+export { pairRound } from './swiss.ts'
+export { ENGINE_VERSION } from './version.ts'

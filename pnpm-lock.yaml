@@ -188,6 +188,10 @@ importers:
       '@score-keepr/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      '@score-keepr/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/shared: {}
 
@@ -196,6 +200,8 @@ importers:
       '@score-keepr/shared':
         specifier: workspace:*
         version: link:../shared
+
+  packages/testkit: {}
 
 packages:
 
