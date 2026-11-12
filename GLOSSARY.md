@@ -71,8 +71,16 @@ The numbered place where a Pairing is played.
 _Avoid_: Board, seat, station
 
 **Entrant**:
-One competing unit in a tournament, whether a single player or a team.
-_Avoid_: Player, participant, competitor, team
+The unit that is paired and ranked in a tournament: one Player or one Team. It is what every engine sees.
+_Avoid_: Participant, competitor, contestant
+
+**Player**:
+One person who plays.
+_Avoid_: Entrant (the unit paired and ranked), user, member
+
+**Team**:
+Several Players competing as one Entrant.
+_Avoid_: Squad, club (a Group Label), side
 
 **Late Entry**:
 An Entrant added after the first round of a Phase was paired.

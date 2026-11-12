@@ -15,7 +15,7 @@ Every point here has been agreed.
   - Final Placings for a Single Elimination Pairing with no winner, which the Tournament Engine needs (`docs/tournament-spec.md`).
 - **Out of scope**:
   - Extra play-off matches. The Consumer runs them.
-  - Team line-ups. A team is one Entrant; the Consumer combines its members' results.
+  - Team line-ups. A Team is one Entrant; the Consumer combines its Players' results.
   - Storage. Designed with the larger product.
 
 ## Package
