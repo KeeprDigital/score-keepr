@@ -1,3 +1,4 @@
+import type { StructureRound } from './structure-types.ts'
 import type { EntrantId, Failure } from './types.ts'
 
 /** How one side of a Result fared. Stated for each side, so both sides can lose. */
@@ -169,3 +170,31 @@ export type StandingsSuccess = {
 }
 
 export type StandingsResult = Failure | StandingsSuccess
+
+export type FinalPlacingsInput = {
+  /** Every Entrant in the event, with their Rank from the round-by-round stage. */
+  entrants: { id: EntrantId; rank: number }[]
+  /** The Single Elimination structure, exactly as it was built. */
+  rounds: StructureRound[]
+  /** The winner of each Pairing decided so far. */
+  winners: { pairing: number; winner: EntrantId }[]
+}
+
+export type FinalPlacing = {
+  id: EntrantId
+  /** 1 is the winner. `null` while it cannot be known yet. */
+  placing: number | null
+  /** True for an Entrant who is in the cut and has not been knocked out. */
+  stillIn: boolean
+  /** Whether the Entrant was part of the cut at all. */
+  inCut: boolean
+}
+
+export type FinalPlacingsSuccess = {
+  ok: true
+  /** Best first: those still in, then by how far they got, then by Rank. */
+  placings: FinalPlacing[]
+  engineVersion: string
+}
+
+export type FinalPlacingsResult = Failure | FinalPlacingsSuccess

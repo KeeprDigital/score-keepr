@@ -16,6 +16,10 @@ export type {
 } from './pairing-types.ts'
 export { compareCodeUnits, distinctPositions, seededUint32 } from './seeded.ts'
 export type {
+  FinalPlacing,
+  FinalPlacingsInput,
+  FinalPlacingsResult,
+  FinalPlacingsSuccess,
   MatchResult,
   Outcome,
   PointsMethod,
