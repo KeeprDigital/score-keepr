@@ -63,13 +63,16 @@ function signOf(row: Float64Array, width: number): number {
   return 0
 }
 
+const NO_LABEL = 0
+const FEW = 1
+
 type Bucket = {
   /** The blossom this bucket's Entrants hang under, or -1. */
   anchor: number
   /** Dual on every level above the window level, the same for every Entrant in the bucket. */
   upper: number[]
-  /** For each level above the window level that goes by Group Label, the label they share. */
-  labels: (string | undefined)[]
+  /** For each level above the window level that rewards a shared Group Label, their label class. */
+  classes: number[]
   /** The least dual on the window level among the Entrants. */
   least: number
   /** Entrants in rising order of the window level's `to` value. */
@@ -85,13 +88,19 @@ type Bucket = {
  * except three kinds that are cheap to know exactly:
  *
  *   - levels that depend on the two Scores alone, which are the same for a whole pair of Score Groups;
- *   - levels that go by Group Label, which are the same for everyone who shares a label;
+ *   - levels that reward a shared Group Label, which cost the same against everyone outside
+ *     the label;
  *   - the window level: the first level that measures a distance along a line, such as Rank or
  *     Shuffle Position, where the cost grows with how far apart two Entrants are.
  *
- * Entrants are put in buckets that share a Score, their labels, and the same duals on every level
- * above the window level. Against a whole bucket, the first test either clears everyone, or
- * leaves only Entrants within a window along the line. Whatever survives gets the exact check.
+ * Entrants are put in buckets that share a Score, a label class, and the same duals on every
+ * level above the window level. Against a whole bucket, the first test either clears everyone,
+ * or leaves only Entrants within a window along the line. Whatever survives gets the exact check.
+ *
+ * A label class is one label when many Entrants carry it. Labels that few carry, such as a pod
+ * of eight, all share one class: a bucket per pod would mean comparing every Entrant with
+ * every pod. Against that class the first test takes the labels to differ, which is right for
+ * all but the few who share the Entrant's own label, and those pairs are checked one by one.
  */
 export function findImprovers(
   field: Field,
@@ -99,6 +108,8 @@ export function findImprovers(
   solution: MatchingSolution,
   N: number,
   atMost: number,
+  /** Counts every comparison made, of an Entrant with a bucket or with another Entrant. */
+  work: { checks: number } = { checks: 0 },
 ): number[] {
   const n = field.size
   const K = levels.length
@@ -118,6 +129,9 @@ export function findImprovers(
   const to = line.to
   // On the last level a slack of exactly zero is not an improvement. Above it, lower levels decide.
   const zeroIsSafe = window === K - 1
+  // Buckets are split by label and by blossom only where that many Entrants share one. A bucket
+  // for every pod or every small blossom would mean comparing each Entrant with all of them.
+  const few = Math.ceil(Math.sqrt(n))
 
   // Which levels above the window reward a shared label, and where each keeps its label in a
   // bucket. Their cost is 1 for most Pairings, so it has to be known exactly. A level that only
@@ -128,15 +142,51 @@ export function findImprovers(
     const shape = levels[c]!.shape
     if (shape?.type === 'labels' && shape.scoring === 'different') labelLevels.push(c)
   }
-  const labelOf = labelLevels.map(
-    (c) => (levels[c]!.shape as { label: readonly (string | undefined)[] }).label,
-  )
+  // Every Entrant's label on each of those levels, as a class number: NO_LABEL, FEW for any
+  // label that fewer than `few` Entrants carry, or a number of its own for each other label.
+  const classOf: Int32Array[] = []
+  /** The Entrants sharing each label that is in the FEW class, on any level. */
+  const sharingFew: number[][] = []
+  for (const c of labelLevels) {
+    const label = (levels[c]!.shape as { label: readonly (string | undefined)[] }).label
+    const sharing = new Map<string, number[]>()
+    for (let a = 0; a < n; a++) {
+      const mine = label[a]
+      if (mine === undefined) continue
+      const members = sharing.get(mine)
+      if (members === undefined) sharing.set(mine, [a])
+      else members.push(a)
+    }
+    const classes = new Int32Array(n).fill(NO_LABEL)
+    let next = FEW + 1
+    for (const members of sharing.values()) {
+      const number = members.length < few ? FEW : next++
+      for (const a of members) classes[a] = number
+      if (number === FEW && members.length > 1) sharingFew.push(members)
+    }
+    classOf.push(classes)
+  }
 
   // The blossoms, laid out so the lowest shared blossom of two nodes is a lookup.
-  const { anchor, topOf, sumFromTop, lowestShared } = layOutBlossoms(solution, N, K, window)
+  const laidOut = layOutBlossoms(solution, N, K, window)
+  const { topOf, sumFromTop, lowestShared } = laidOut
+  // A blossom's own dual can only raise a slack, so the first test may leave it out. It is kept
+  // for Entrants inside a large top-level blossom, where it does most of the ruling out, and
+  // left out for the rest, who then count as hanging under no blossom at all.
+  const inside = new Int32Array(total)
+  for (let a = 0; a < n; a++) {
+    const under = laidOut.anchor[a]!
+    if (under !== -1) inside[topOf[under]!]!++
+  }
+  const anchor = new Int32Array(n).fill(-1)
+  for (let a = 0; a < n; a++) {
+    const under = laidOut.anchor[a]!
+    if (under !== -1 && inside[topOf[under]!]! >= few) anchor[a] = under
+  }
 
   const slack = new Float64Array(K)
   const improves = (a: number, b: number): boolean => {
+    work.checks++
     for (let c = 0; c < K; c++)
       slack[c] = dual[a * K + c]! + dual[b * K + c]! + 2 * levels[c]!.pair(a, b)
     if (inblossom[a] === inblossom[b]) {
@@ -164,13 +214,13 @@ export function findImprovers(
       const o = a * K
       let key = String(anchor[a])
       for (let c = 0; c < window; c++) key += `,${dual[o + c]}`
-      for (const labels of labelOf) key += `\u0000${labels[a] ?? '\u0001'}`
+      for (const classes of classOf) key += `/${classes[a]}`
       let bucket = byKey.get(key)
       if (bucket === undefined) {
         bucket = {
           anchor: anchor[a]!,
           upper: Array.from(dual.subarray(o, o + window)),
-          labels: labelOf.map((labels) => labels[a]),
+          classes: classOf.map((classes) => classes[a]!),
           least: Number.POSITIVE_INFINITY,
           members: [],
         }
@@ -198,8 +248,13 @@ export function findImprovers(
   }
 
   const improvers: number[] = []
+  const reported = new Set<number>()
   const found = (a: number, b: number): boolean => {
-    improvers.push(a < b ? a * N + b : b * N + a)
+    const key = a < b ? a * N + b : b * N + a
+    if (!reported.has(key)) {
+      reported.add(key)
+      improvers.push(key)
+    }
     return improvers.length >= atMost
   }
   // Twice the cost on each level above the window that is known exactly; zero stands in elsewhere.
@@ -223,6 +278,7 @@ export function findImprovers(
         const windowA = dual[oa + window]!
 
         for (const bucket of against) {
+          work.checks++
           const shared = sharedUnder(anchorA, bucket.anchor)
           const os = shared * K
           let sign = 0
@@ -234,9 +290,11 @@ export function findImprovers(
               (shared === -1 ? 0 : 2 * sumFromTop[os + c]!)
             const slot = slotOf[c]!
             if (slot !== -1) {
-              const mine = labelOf[slot]![a]
-              const theirs = bucket.labels[slot]
-              if (mine !== undefined && theirs !== undefined && mine !== theirs) x += 2
+              // Two labels that differ cost 1. Against the FEW class they are taken to differ.
+              const mine = classOf[slot]![a]!
+              const theirs = bucket.classes[slot]!
+              if (mine !== NO_LABEL && theirs !== NO_LABEL && (theirs === FEW || mine !== theirs))
+                x += 2
             }
             if (x > 0) sign = 1
             else if (x < 0) sign = -1
@@ -285,6 +343,15 @@ export function findImprovers(
               return improvers
           }
         }
+      }
+    }
+  }
+
+  // Entrants who share a label in the FEW class were taken above to have different labels.
+  for (const members of sharingFew) {
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        if (improves(members[i]!, members[j]!) && found(members[i]!, members[j]!)) return improvers
       }
     }
   }

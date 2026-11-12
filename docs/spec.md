@@ -274,16 +274,17 @@ Other Configurations, one round each, same machine. All were proven best:
 
 | Configuration | 2,001 Entrants | 6,001 | 20,001 |
 |---|---|---|---|
-| Starting | 0.1 s | 0.2 s | 0.4 s |
-| Avoid same club, then starting | 0.1 s | 0.2 s | 0.4 s |
+| Starting | 0.1 s | 0.1 s | 0.3 s |
+| Avoid same club, then starting | 0.1 s | 0.1 s | 0.3 s |
 | A last round: no rematch, Bye cap, Bye to lowest Rank, pair adjacent by Rank | under 0.1 s | 0.1 s | 0.2 s |
-| Starting with a Pair-down choice by Rank | 0.1 s | 0.9 s | 1.0 s |
-| Prefer same pod (pods of 8), then starting | 0.1 s | 0.2 s | 1.5 s |
+| Starting with a Pair-down choice by Rank | 0.1 s | 0.8 s | 0.9 s |
+| Prefer same pod (pods of 8), then starting, first round | under 0.1 s | 0.1 s | 0.2 s |
+| The same mid-event, with Scores spread out | 0.1 s | 0.1 s | 0.3 s |
 | Pair top vs bottom by Rank | under 0.1 s | under 0.1 s | 0.1 s |
 | Bye to lowest Rank, then top vs bottom | 0.1 s | 0.2 s | 0.3 s |
 | Pair adjacent by Rank, odd count, nothing said about the Bye | 0.1 s | 0.2 s | 1.0 s |
 
-The matcher is first offered opponents by what the levels reward: near in Score and Shuffle Position, near along any level that measures a distance such as Rank, and sharing any Group Label that is rewarded. The proof step rules Pairings out the same ways.
+The matcher is first offered opponents by what the levels reward: near in Score and Shuffle Position, near along any level that measures a distance such as Rank, and sharing any Group Label that is rewarded. The proof step rules Pairings out the same ways: it sorts Entrants into buckets it can rule out whole, and compares each Entrant with every bucket. Group Labels that few Entrants share, such as pods, and small blossoms get no bucket of their own. With one each, pods took 1.5 s in a first round at 20,001 and 5 s mid-event.
 
 The last row took 10 s at 20,001 until the matcher was changed. With an odd count and no Bye rule, every second Entrant is an equally good choice for the Bye as far as Rank goes, and each choice shifts every Pairing below it. Shuffle Positions decide between about ten thousand candidates that each differ in thousands of Pairings, and the proof of the winner nests thousands of blossoms inside one another. The matcher used to touch every Entrant inside at every layer; it now leaves the largest part of each layer alone. A Configuration that gives the Bye by Score alone has the same shape among its lowest Score Group: a first round paired by Rank, with every Score level, took 9.5 s at 20,001 and now takes under 1 s.
 

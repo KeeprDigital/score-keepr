@@ -5,7 +5,7 @@ import { levelsOf, type Level } from '../src/cost.ts'
 import { solveExhaustive, type Mates } from '../src/exhaustive.ts'
 import { buildField } from '../src/field.ts'
 import { solveByMatching, workCeiling } from '../src/matching/solve.ts'
-import type { RoundInput } from '../src/index.ts'
+import { startingConfiguration, type Constraint, type RoundInput } from '../src/index.ts'
 import { round } from './support/arbitraries.ts'
 
 /** What a set of Pairings scores on every level, added exactly. */
@@ -165,6 +165,56 @@ describe('the fast matcher against the slow exact solver', () => {
     const usage = { steps: 0 }
     expect(solveByMatching(field, levelsOf(input.configuration, field), { usage })).toBeDefined()
     expect(usage.steps).toBeLessThan(workCeiling(size) / 100)
+  })
+
+  // The proof step sorts Entrants into buckets and compares each Entrant with every bucket, so
+  // the number of buckets must stay small. Each case below once had a bucket for every pod, or
+  // every small blossom, or would have without the rule it names. The bounds sit between what
+  // each case takes now and what it takes with that rule broken, at least twice clear of both.
+  test.each<[string, Constraint[], (at: number) => Record<string, string>, number]>([
+    [
+      'pods of 8, sharing one preferred: small labels and small blossoms share buckets',
+      [{ type: 'prefer-same-group-label', kind: 'pod' }, ...startingConfiguration],
+      (at) => ({ pod: `p${Math.floor(at / 8)}` }),
+      250,
+    ],
+    [
+      '4 regions, sharing one preferred: a large label keeps a bucket of its own',
+      [{ type: 'prefer-same-group-label', kind: 'region' }, ...startingConfiguration],
+      (at) => ({ region: `r${at % 4}` }),
+      1500,
+    ],
+    [
+      'the starting Configuration: a large blossom keeps buckets of its own',
+      startingConfiguration,
+      () => ({}),
+      250,
+    ],
+  ])('the proof step makes few comparisons per Entrant, %s', (_, configuration, groups, most) => {
+    const size = 4001
+    // Five coin flips each, fixed by the Entrant's number: Scores as they stand after five rounds.
+    const scoreOf = (at: number): number => {
+      let wins = 0
+      for (let bits = Math.imul(at + 1, 0x9e3779b1) >>> 27; bits > 0; bits >>>= 1) wins += bits & 1
+      return 3 * wins
+    }
+    const input: RoundInput = {
+      system: 'swiss',
+      entrants: Array.from({ length: size }, (_, at) => ({
+        id: `e${at}`,
+        score: scoreOf(at),
+        opponents: [],
+        byes: 0,
+        groups: groups(at),
+      })),
+      configuration,
+      randomSeed: 'proof',
+      round: 6,
+    }
+    const field = buildField(input)
+    const usage = { steps: 0, proofChecks: 0 }
+    expect(solveByMatching(field, levelsOf(configuration, field), { usage })).toBeDefined()
+    expect(usage.proofChecks).toBeLessThan(most * size)
   })
 
   test('with no limit given, the built-in ceiling applies', () => {

@@ -14,8 +14,11 @@ export type MatchOptions = {
   neighbours?: number
   /** Check left-out Pairings the plain way, one pair at a time. For comparing with the fast way. */
   plainProof?: boolean
-  /** Filled in with how much work the call took. For measuring, never for deciding anything. */
-  usage?: { steps: number }
+  /**
+   * Filled in with how much work the call took: the matcher's steps, and the comparisons the
+   * proof step made. For measuring, never for deciding anything.
+   */
+  usage?: { steps: number; proofChecks?: number }
 }
 
 /** Same-Score neighbours, by Shuffle Position, that each Entrant is offered. */
@@ -64,6 +67,7 @@ export function solveByMatching(
   const K = levels.length
   const maxSteps = options.maxSteps ?? workCeiling(n)
   let steps = 0
+  const proofWork = { checks: 0 }
 
   const weightInto = (out: Float64Array, at: number, a: number, b: number): void => {
     if (b === BYE) for (let c = 0; c < K; c++) out[at + c] = -levels[c]!.bye(a)
@@ -106,15 +110,15 @@ export function solveByMatching(
     if (verifyMatching(graph, solution) !== undefined) return undefined
     if (complete) return matesOf(solution, n, BYE)
 
-    const improvers = (options.plainProof === true ? findImproversSlowly : findImprovers)(
-      field,
-      levels,
-      solution,
-      N,
-      50 * N,
-    )
+    const improvers =
+      options.plainProof === true
+        ? findImproversSlowly(field, levels, solution, N, 50 * N)
+        : findImprovers(field, levels, solution, N, 50 * N, proofWork)
     steps += n
-    if (options.usage !== undefined) options.usage.steps = steps
+    if (options.usage !== undefined) {
+      options.usage.steps = steps
+      options.usage.proofChecks = proofWork.checks
+    }
     if (steps > maxSteps) return undefined
     if (improvers.length === 0) return matesOf(solution, n, BYE)
     for (const key of improvers) edges.add(key)
