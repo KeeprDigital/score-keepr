@@ -143,6 +143,30 @@ describe('the fast matcher against the slow exact solver', () => {
     )
   })
 
+  test('pairing by Rank with an odd count and no Bye rule stays a small fraction of the ceiling', () => {
+    // Every second Entrant is an equally good Bye as far as Rank goes, so Shuffle Positions pick
+    // between thousands of candidates. The proof nests blossoms thousands deep, and the work
+    // must not grow with the square of that depth.
+    const size = 4001
+    const input: RoundInput = {
+      system: 'swiss',
+      entrants: Array.from({ length: size }, (_, at) => ({
+        id: `e${at}`,
+        score: 0,
+        opponents: [],
+        byes: 0,
+        rank: at + 1,
+      })),
+      configuration: [{ type: 'pair-adjacent-by-rank' }],
+      randomSeed: 'deep',
+      round: 1,
+    }
+    const field = buildField(input)
+    const usage = { steps: 0 }
+    expect(solveByMatching(field, levelsOf(input.configuration, field), { usage })).toBeDefined()
+    expect(usage.steps).toBeLessThan(workCeiling(size) / 100)
+  })
+
   test('with no limit given, the built-in ceiling applies', () => {
     fc.assert(
       fc.property(round({ minEntrants: 9, maxEntrants: 40 }), (input) => {

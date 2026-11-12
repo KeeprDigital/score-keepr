@@ -2,13 +2,16 @@
 //
 // Weights are rows of whole numbers compared level by level, so a strict priority order needs
 // no big-number packing. This is the primal-dual blossom algorithm, laid out after van
-// Rantwijk's mwmatching with three changes that suit Swiss-shaped graphs:
+// Rantwijk's mwmatching with four changes that suit Swiss-shaped graphs:
 //
 //   1. One alternating tree per stage, grown from a single unmatched vertex. Only the vertices
 //      that tree touches are visited or reset.
 //   2. Dual updates are lazy: one running offset per stage, with the next event taken from
 //      heaps instead of a scan over every vertex.
 //   3. A greedy start matches most vertices before any stage runs.
+//   4. Wrapping a blossom in a new one, and unwrapping it again, leaves the vertices of the
+//      largest child alone. Blossoms nest thousands deep when thousands of Entrants are equally
+//      good for the Bye, and touching every vertex at every layer cost the square of the depth.
 //
 // The answer is never trusted on its own. `verifyMatching` checks the proof that comes with it.
 //
@@ -165,13 +168,30 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
   const mate = new Int32Array(N).fill(-1) // remote endpoint of the matched edge
   const label = new Int8Array(2 * N) // 0 none, 1 S, 2 T
   const labelend = new Int32Array(2 * N).fill(-1)
-  const inblossom = new Int32Array(N)
+  // Which top-level blossom a vertex is in takes two reads: every vertex carries a group number,
+  // and each group number points at one top-level blossom. A new blossom takes over the group
+  // number of its largest child, so only the vertices of its smaller children are renumbered.
+  // Blossoms can nest thousands deep, each one wrapping the last plus a vertex or two; writing
+  // the new blossom into every vertex each time would cost the square of that depth.
+  const group = new Int32Array(N)
+  const topOf = new Int32Array(N)
+  /** The group number a blossom's vertices carry while it is top-level. A vertex's is itself. */
+  const groupOf = new Int32Array(2 * N)
+  /** How many vertices a blossom holds. */
+  const leafCount = new Int32Array(2 * N).fill(1)
+  /**
+   * Set on a child of a T-blossom that has just been expanded, until the child gets its new
+   * label: its vertices' duals are still stored the way a T-vertex's are.
+   */
+  const stillT = new Uint8Array(2 * N)
   const blossomparent = new Int32Array(2 * N).fill(-1)
   const blossomchilds: (number[] | null)[] = Array.from({ length: 2 * N }, () => null)
   const blossomendps: (number[] | null)[] = Array.from({ length: 2 * N }, () => null)
   const blossombase = new Int32Array(2 * N).fill(-1)
   for (let i = 0; i < N; i++) {
-    inblossom[i] = i
+    group[i] = i
+    topOf[i] = i
+    groupOf[i] = i
     blossombase[i] = i
   }
   const bestedge = new Int32Array(N).fill(-1) // best S-edge into a vertex hidden inside a T-blossom
@@ -212,6 +232,8 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
   const finish = (perfect: boolean): MatchingSolution => {
     const partner = new Int32Array(N).fill(-1)
     for (let v = 0; v < N; v++) if (mate[v] !== -1) partner[v] = endpoint[mate[v]!]!
+    const inblossom = new Int32Array(N)
+    for (let v = 0; v < N; v++) inblossom[v] = topOf[group[v]!]!
     return {
       perfect,
       partner,
@@ -259,12 +281,15 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
   }
 
   function labelS(w: number, p: number): void {
-    const b = inblossom[w]!
+    const b = topOf[group[w]!]!
     label[w] = label[b] = 1
     labelend[w] = labelend[b] = p
+    // From T form straight to S form is twice the offset; from the true value, once.
+    const times = stillT[b] ? 2 : 1
+    stillT[b] = 0
     if (b < N) {
       const o = w * K
-      for (let c = 0; c < K; c++) dual[o + c]! += D[c]!
+      for (let c = 0; c < K; c++) dual[o + c]! += times * D[c]!
       touchV(w)
       queue[qt++] = w
     } else {
@@ -275,7 +300,7 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
       for (let i = 0; i < leaves.length; i++) {
         const v = leaves[i]!
         const o = v * K
-        for (let c = 0; c < K; c++) dual[o + c]! += D[c]!
+        for (let c = 0; c < K; c++) dual[o + c]! += times * D[c]!
         touchV(v)
         queue[qt++] = v
       }
@@ -283,24 +308,31 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
   }
 
   function labelT(w: number, p: number): void {
-    const b = inblossom[w]!
+    const b = topOf[group[w]!]!
     label[w] = label[b] = 2
     labelend[w] = labelend[b] = p
+    // A child of a T-blossom just expanded is in T form already, and already touched.
+    const ready = stillT[b] === 1
+    stillT[b] = 0
     if (b < N) {
-      const o = w * K
-      for (let c = 0; c < K; c++) dual[o + c]! -= D[c]!
+      if (!ready) {
+        const o = w * K
+        for (let c = 0; c < K; c++) dual[o + c]! -= D[c]!
+      }
       touchV(w)
     } else {
       touchB(b)
       const ob = b * K
       for (let c = 0; c < K; c++) dual[ob + c]! += D[c]!
       pushH4(b)
-      const leaves = getLeaves(b, [])
-      for (let i = 0; i < leaves.length; i++) {
-        const v = leaves[i]!
-        const o = v * K
-        for (let c = 0; c < K; c++) dual[o + c]! -= D[c]!
-        touchV(v)
+      if (!ready) {
+        const leaves = getLeaves(b, [])
+        for (let i = 0; i < leaves.length; i++) {
+          const v = leaves[i]!
+          const o = v * K
+          for (let c = 0; c < K; c++) dual[o + c]! -= D[c]!
+          touchV(v)
+        }
       }
     }
     const matched = mate[blossombase[b]!]!
@@ -314,7 +346,7 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
     let base = -1
     while (v !== -1 || w !== -1) {
       tick()
-      let b = inblossom[v]!
+      let b = topOf[group[v]!]!
       if (label[b]! & 4) {
         base = blossombase[b]!
         break
@@ -324,7 +356,7 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
       if (labelend[b] === -1) v = -1
       else {
         v = endpoint[labelend[b]!]!
-        b = inblossom[v]!
+        b = topOf[group[v]!]!
         v = endpoint[labelend[b]!]!
       }
       if (w !== -1) {
@@ -340,9 +372,9 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
   function addBlossom(base: number, k: number): void {
     let v = EI[k]!
     let w = EJ[k]!
-    const bb = inblossom[base]!
-    let bv = inblossom[v]!
-    let bw = inblossom[w]!
+    const bb = topOf[group[base]!]!
+    let bv = topOf[group[v]!]!
+    let bw = topOf[group[w]!]!
     const b = unused.pop()!
     blossombase[b] = base
     blossomparent[b] = -1
@@ -355,7 +387,7 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
       path.push(bv)
       endps.push(labelend[bv]!)
       v = endpoint[labelend[bv]!]!
-      bv = inblossom[v]!
+      bv = topOf[group[v]!]!
     }
     path.push(bb)
     path.reverse()
@@ -367,7 +399,7 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
       path.push(bw)
       endps.push(labelend[bw]! ^ 1)
       w = endpoint[labelend[bw]!]!
-      bw = inblossom[w]!
+      bw = topOf[group[w]!]!
     }
     blossomchilds[b] = path
     blossomendps[b] = endps
@@ -387,9 +419,22 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
       for (let c = 0; c < K; c++) dual[o + c] = -D[c]! // true value 0
     }
     touchB(b)
+    // The new blossom takes the group number of its largest child.
+    let largest = path[0]!
+    let count = 0
+    for (let i = 0; i < path.length; i++) {
+      const child = path[i]!
+      count += leafCount[child]!
+      if (leafCount[child]! > leafCount[largest]!) largest = child
+    }
+    leafCount[b] = count
+    const g = groupOf[largest]!
+    groupOf[b] = g
     for (let i = 0; i < path.length; i++) {
       const child = path[i]!
       const wasT = label[child] === 2
+      // The largest child keeps its group number, and an S-child's vertices are queued already.
+      if (child === largest && !wasT) continue
       const leaves = getLeaves(child, [])
       for (let q = 0; q < leaves.length; q++) {
         const x = leaves[q]!
@@ -398,16 +443,17 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
           for (let c = 0; c < K; c++) dual[o + c]! += 2 * D[c]!
           queue[qt++] = x
         }
-        inblossom[x] = b
+        group[x] = g
       }
     }
+    topOf[g] = b
   }
 
   function pushH2(k: number): void {
     if (inH2[k]) return
     let i = EI[k]!
     let j = EJ[k]!
-    if (label[inblossom[i]!] !== 1) {
+    if (label[topOf[group[i]!]!] !== 1) {
       const swap = i
       i = j
       j = swap
@@ -448,24 +494,22 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
     const endps = blossomendps[b]!
     const L = childs.length
     const at = (list: number[], i: number): number => list[((i % L) + L) % L]!
-    // Every leaf is in T form: bring them back to true values first.
-    {
-      const leaves = getLeaves(b, [])
-      for (let i = 0; i < leaves.length; i++) {
-        const o = leaves[i]! * K
-        for (let c = 0; c < K; c++) dual[o + c]! += D[c]!
-      }
-    }
+    // Every vertex inside is in T form. A child that comes out as T again is left exactly as it
+    // is, so each child is only marked here, and converted once its new label is known. The
+    // child whose group number the blossom took keeps it; the rest go back to their own.
+    const g = groupOf[b]!
     for (let i = 0; i < L; i++) {
       const s = childs[i]!
       blossomparent[s] = -1
-      if (s < N) inblossom[s] = s
-      else {
+      stillT[s] = 1
+      const own = groupOf[s]!
+      if (own !== g) {
         const leaves = getLeaves(s, [])
-        for (let q = 0; q < leaves.length; q++) inblossom[leaves[q]!] = s
+        for (let q = 0; q < leaves.length; q++) group[leaves[q]!] = own
       }
+      topOf[own] = s
     }
-    const entrychild = inblossom[endpoint[labelend[b]! ^ 1]!]!
+    const entrychild = topOf[group[endpoint[labelend[b]! ^ 1]!]!]!
     let j = childs.indexOf(entrychild)
     let jstep: number
     let endptrick: number
@@ -487,22 +531,17 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
       p = at(endps, j - endptrick) ^ endptrick
       j += jstep
     }
-    // The base child becomes T without stepping on to its mate.
+    // The base child becomes T without stepping on to its mate. Nothing has relabelled it yet,
+    // so its vertices are in T form already.
     let bv = at(childs, j)
     label[endpoint[p ^ 1]!] = label[bv] = 2
     labelend[endpoint[p ^ 1]!] = labelend[bv] = p
-    {
-      const leaves = getLeaves(bv, [])
-      for (let i = 0; i < leaves.length; i++) {
-        const o = leaves[i]! * K
-        for (let c = 0; c < K; c++) dual[o + c]! -= D[c]!
-      }
-      if (bv >= N) {
-        touchB(bv)
-        const o = bv * K
-        for (let c = 0; c < K; c++) dual[o + c]! += D[c]!
-        pushH4(bv)
-      }
+    stillT[bv] = 0
+    if (bv >= N) {
+      touchB(bv)
+      const o = bv * K
+      for (let c = 0; c < K; c++) dual[o + c]! += D[c]!
+      pushH4(bv)
     }
     j += jstep
     while (at(childs, j) !== entrychild) {
@@ -525,7 +564,15 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
         label[endpoint[mate[blossombase[bv]!]!]!] = 0
         labelT(found, labelend[found]!)
       } else {
-        // Back to unlabelled: its remembered S-edges become growth candidates.
+        // Back to unlabelled: its duals return to their true values, and its remembered
+        // S-edges become growth candidates.
+        if (stillT[bv]) {
+          stillT[bv] = 0
+          for (let i = 0; i < leaves.length; i++) {
+            const o = leaves[i]! * K
+            for (let c = 0; c < K; c++) dual[o + c]! += D[c]!
+          }
+        }
         for (let i = 0; i < leaves.length; i++) {
           const remembered = bestedge[leaves[i]!]!
           if (remembered !== -1) pushH2(remembered)
@@ -605,19 +652,19 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
 
   // Edge (p >> 1) joins S-vertex v to free vertex w; p is its endpoint at w.
   function augment(v: number, w: number, p: number): void {
-    const bw = inblossom[w]!
+    const bw = topOf[group[w]!]!
     if (bw >= N) augmentBlossom(bw, w)
     mate[w] = p ^ 1
     let s = v
     let q = p
     for (;;) {
       tick()
-      const bs = inblossom[s]!
+      const bs = topOf[group[s]!]!
       if (bs >= N) augmentBlossom(bs, s)
       mate[s] = q
       if (labelend[bs] === -1) break
       const t = endpoint[labelend[bs]!]!
-      const bt = inblossom[t]!
+      const bt = topOf[group[t]!]!
       s = endpoint[labelend[bt]!]!
       const j = endpoint[labelend[bt]! ^ 1]!
       if (bt >= N) augmentBlossom(bt, j)
@@ -640,8 +687,8 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
           const p = adj[a]!
           const k = p >> 1
           const w = endpoint[p]!
-          const bw = inblossom[w]!
-          if (inblossom[v] === bw) continue
+          if (group[v] === group[w]) continue
+          const bw = topOf[group[w]!]!
           const lw = label[bw]!
           const ow = w * K
           const ok = k * K
@@ -709,12 +756,12 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
         const k = H2.peek()
         let i = EI[k]!
         let j = EJ[k]!
-        if (label[inblossom[i]!] !== 1) {
+        if (label[topOf[group[i]!]!] !== 1) {
           const swap = i
           i = j
           j = swap
         }
-        const lj = label[inblossom[j]!]!
+        const lj = label[topOf[group[j]!]!]!
         if (lj === 1) {
           H2.pop()
           inH2[k] = 0
@@ -762,7 +809,7 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
       while (H3.count > 0) {
         tick()
         const k = H3.peek()
-        if (inblossom[EI[k]!] === inblossom[EJ[k]!]) H3.pop()
+        if (group[EI[k]!] === group[EJ[k]!]) H3.pop()
         else {
           t3 = k
           break
@@ -823,13 +870,13 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
         inH2[k] = 0
         let i = EI[k]!
         let j = EJ[k]!
-        if (label[inblossom[i]!] !== 1) {
+        if (label[topOf[group[i]!]!] !== 1) {
           const swap = i
           i = j
           j = swap
         }
         const p = EI[k] === i ? 2 * k + 1 : 2 * k
-        if (mate[blossombase[inblossom[j]!]!] === -1) {
+        if (mate[blossombase[topOf[group[j]!]!]!] === -1) {
           augment(i, j, p)
           return true
         }
@@ -847,7 +894,7 @@ function search(graph: MatchingGraph, maxSteps: number): MatchingSolution {
   function endStage(): void {
     for (let i = 0; i < ntv; i++) {
       const v = touchedV[i]!
-      const l = label[inblossom[v]!]
+      const l = label[topOf[group[v]!]!]
       const o = v * K
       if (l === 1) for (let c = 0; c < K; c++) dual[o + c]! -= D[c]!
       else if (l === 2) for (let c = 0; c < K; c++) dual[o + c]! += D[c]!

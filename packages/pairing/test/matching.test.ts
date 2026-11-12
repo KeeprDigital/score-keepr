@@ -81,9 +81,17 @@ const anyGraph = fc
       .map((chosen) => ({ size, levels, edges: chosen.flat() }))
   })
 
+/**
+ * Far more work than any graph in this file needs. With it, a fault that would make the matcher
+ * loop for ever fails the test instead of hanging it.
+ */
+const PLENTY = 1_000_000
+const solve = (graph: MatchingGraph): ReturnType<typeof solveMatching> =>
+  solveMatching(graph, PLENTY)
+
 describe('solveMatching', () => {
   test('pairs two vertices joined by one edge', () => {
-    const solution = solveMatching(graphOf(2, 1, [{ a: 0, b: 1, weight: [-5] }]))
+    const solution = solve(graphOf(2, 1, [{ a: 0, b: 1, weight: [-5] }]))
     expect(solution?.perfect).toBe(true)
     expect([...(solution?.partner ?? [])]).toEqual([1, 0])
   })
@@ -96,7 +104,7 @@ describe('solveMatching', () => {
       { a: 1, b: 2, weight: [-1, -1] },
       { a: 3, b: 0, weight: [-1, -1] },
     ]
-    const solution = solveMatching(graphOf(4, 2, edges))
+    const solution = solve(graphOf(4, 2, edges))
     expect([...(solution?.partner ?? [])]).toEqual([3, 2, 1, 0])
   })
 
@@ -109,7 +117,7 @@ describe('solveMatching', () => {
       { a: 1, b: 4, weight: [-2] },
       { a: 2, b: 5, weight: [-3] },
     ]
-    const solution = solveMatching(graphOf(6, 1, edges))
+    const solution = solve(graphOf(6, 1, edges))
     expect(solution?.perfect).toBe(true)
     expect([...(solution?.partner ?? [])]).toEqual([3, 4, 5, 0, 1, 2])
   })
@@ -117,8 +125,8 @@ describe('solveMatching', () => {
   test('says so when no perfect matching exists', () => {
     // A star: the centre can only be matched once.
     const edges = [1, 2, 3].map((leaf) => ({ a: 0, b: leaf, weight: [0] }))
-    expect(solveMatching(graphOf(4, 1, edges))?.perfect).toBe(false)
-    expect(solveMatching(graphOf(2, 1, []))?.perfect).toBe(false)
+    expect(solve(graphOf(4, 1, edges))?.perfect).toBe(false)
+    expect(solve(graphOf(2, 1, []))?.perfect).toBe(false)
   })
 
   test('gives up when it would take more steps than allowed', () => {
@@ -137,7 +145,7 @@ describe('solveMatching', () => {
         fc.integer({ min: 0, max: 400 }),
         ({ size, levels, edges }, allowed) => {
           const graph = graphOf(size, levels, edges)
-          const unlimited = solveMatching(graph)
+          const unlimited = solve(graph)
           const limited = solveMatching(graph, allowed)
           // Either it ran out, or it finished and agrees exactly with the unlimited run.
           expect(limited === undefined || limited.steps <= allowed).toBe(true)
@@ -154,7 +162,7 @@ describe('solveMatching', () => {
   test('finds a perfect matching exactly when one exists, and it is the heaviest', () => {
     fc.assert(
       fc.property(anyGraph, ({ size, levels, edges }) => {
-        const solution = solveMatching(graphOf(size, levels, edges))
+        const solution = solve(graphOf(size, levels, edges))
         const best = bestByBruteForce(size, levels, edges)
         expect(solution?.perfect).toBe(best !== undefined)
         fc.pre(best !== undefined && solution !== undefined)
@@ -177,7 +185,7 @@ describe('solveMatching', () => {
     fc.assert(
       fc.property(anyGraph, ({ size, levels, edges }) => {
         const graph = graphOf(size, levels, edges)
-        const solution = solveMatching(graph)
+        const solution = solve(graph)
         fc.pre(solution?.perfect === true)
         expect(verifyMatching(graph, solution as NonNullable<typeof solution>)).toBeUndefined()
       }),
@@ -189,7 +197,7 @@ describe('solveMatching', () => {
     let withBlossoms = 0
     fc.assert(
       fc.property(anyGraph, ({ size, levels, edges }) => {
-        const solution = solveMatching(graphOf(size, levels, edges))
+        const solution = solve(graphOf(size, levels, edges))
         fc.pre(solution?.perfect === true)
         const proof = solution as NonNullable<typeof solution>
         const forest = layOutBlossoms(proof, size, levels, 0)
@@ -222,7 +230,7 @@ describe('solveMatching', () => {
       { a: 3, b: 0, weight: [-5] },
     ]
     const graph = graphOf(4, 1, edges)
-    const solution = solveMatching(graph) as NonNullable<ReturnType<typeof solveMatching>>
+    const solution = solve(graph) as NonNullable<ReturnType<typeof solveMatching>>
     expect(verifyMatching(graph, solution)).toBeUndefined()
     solution.dual[0] = (solution.dual[0] as number) - 1
     expect(verifyMatching(graph, solution)).toMatch(/could be improved/)
@@ -250,7 +258,7 @@ describe('solveMatching', () => {
       { a: 1, b: 2, weight: [0] },
       { a: 3, b: 0, weight: [-5] },
     ])
-    const solution = solveMatching(graph) as Solution
+    const solution = solve(graph) as Solution
     tamper(solution)
     expect(verifyMatching(graph, solution)).toMatch(reason)
   })

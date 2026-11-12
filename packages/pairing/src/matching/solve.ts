@@ -34,8 +34,8 @@ const MOST_ROUNDS = 50
  * It exists so that a fault inside the matcher can never hang a call: the worst that can
  * happen is a result marked not proven. It is set far above anything measured. Whole events
  * of up to 20,001 Entrants, including ones run long enough to force rematches, stay under a
- * twentieth of it; the heaviest case found, pairing by Rank with an odd count and no Bye rule,
- * reaches a fifth.
+ * twentieth of it. So does the heaviest single round found, pairing by Rank with an odd count
+ * and no Bye rule, which stays under a hundredth.
  *
  * Whole-number arithmetic only, so it is the same on every machine.
  */

@@ -38,7 +38,8 @@ describe('finding the Pairings that could improve a result', () => {
               ),
             ),
           }
-          const solution = solveMatching(graph)
+          // A limit, so a fault that loops for ever fails here instead of hanging.
+          const solution = solveMatching(graph, 1_000_000)
           fc.pre(solution?.perfect === true)
           const proof = solution as NonNullable<typeof solution>
 
