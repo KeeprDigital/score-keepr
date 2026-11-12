@@ -1,0 +1,12 @@
+{
+  "name": "@score-keepr/integration",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Whole events played through both engines. Never published.",
+  "type": "module",
+  "devDependencies": {
+    "@score-keepr/pairing": "workspace:*",
+    "@score-keepr/shared": "workspace:*",
+    "@score-keepr/standings": "workspace:*"
+  }
+}

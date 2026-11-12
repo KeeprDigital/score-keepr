@@ -293,8 +293,8 @@ Both engines use it. It uses nothing.
 - **Each engine's input and output types**, defined separately on top of those. A Standings row and a pairing Entrant are different types, so each side can change its own shape.
 - **The seeded-random routine** behind Shuffle Positions and the random Tiebreaker. Changing it changes both engines' output.
 - **Mapping functions**:
-  - Standings rows to Entrants for a Swiss round. The Consumer says who is present and supplies Group Labels.
-  - Standings rows to Entrants for a Single Elimination cut of the top N. If the cut line falls between Entrants sharing a Rank, it returns an error rather than choosing.
+  - `pairingEntrantsFrom`: Standings rows to Entrants for a Swiss round. The Consumer says who is present and supplies Group Labels.
+  - `topCutFrom`: Standings rows to Entrants for a Single Elimination cut of the top N. If the cut line falls between Entrants sharing a Rank, or two inside the cut share one, it returns an error rather than choosing.
 
 The Pairing Engine knows nothing about Standings and accepts facts from anywhere. More mappers can be added without breaking anything.
 

@@ -183,6 +183,18 @@ importers:
         specifier: 1.5.1
         version: 1.5.1(@types/node@26.6.6)(@vitest/ui@5.1.0)(typescript@7.0.2)
 
+  packages/integration:
+    devDependencies:
+      '@score-keepr/pairing':
+        specifier: workspace:*
+        version: link:../pairing
+      '@score-keepr/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@score-keepr/standings':
+        specifier: workspace:*
+        version: link:../standings
+
   packages/pairing:
     dependencies:
       '@score-keepr/shared':
