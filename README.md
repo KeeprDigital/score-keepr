@@ -9,6 +9,9 @@ Tournament engines: one decides who plays whom, one works out the standings. Bot
 | `packages/pairing` | Pairing Engine: Swiss, Single Elimination, checking hand-made Pairings. |
 | `packages/standings` | Standings Engine: Standings and Final Placings. |
 | `packages/shared` | Types, the seeded-random routine and mapping functions both engines use. |
+| `packages/testkit` | Test helpers: scenario files with recorded answers. Never published. |
+| `packages/integration` | Whole events played through both engines. Never published. |
+| `packages/*/RULES.md` | The exact rules each engine follows. |
 | `tooling/` | Shared pieces of build and lint config, imported by the `vite.config.ts` files. |
 | `.vscode/` | Editor settings so format-on-save uses the root config. |
 | `docs/spec.md` | Pairing Engine spec. |
@@ -17,7 +20,7 @@ Tournament engines: one decides who plays whom, one works out the standings. Bot
 | `GLOSSARY.md` | The project's vocabulary. Use these words. |
 | `prototype-matcher/` | Throwaway prototype of the matcher. Not part of the build. |
 
-The packages are placeholders. No engine code exists yet.
+Both engines are built. `docs/spec.md` and `docs/standings-spec.md` say what is measured and what is not.
 
 ## Commands
 
@@ -30,8 +33,12 @@ pnpm check        # format, lint and type checks only
 pnpm fix          # apply formatting and lint fixes
 pnpm test
 pnpm test:watch
+pnpm test:record  # re-record scenario answers after an intended change
 pnpm build
+pnpm bench 10001 15 --check   # time a simulated event
 ```
+
+CI runs `verify` on Node 22, 24 and 26, and the benchmark with `--check`, on every push to `main` and every pull request (`.github/workflows/ci.yml`).
 
 All tooling is Vite+ (`vp`): Oxfmt, Oxlint with type checks, Vitest, and `vp pack` for builds, run across packages by `vp run`. Lint, format and test settings live in the root `vite.config.ts`; each package has its own for `pack`. Tests import from `vite-plus/test`.
 

@@ -1,0 +1,2 @@
+error  disallowed-outcome    ann, ben
+error  two-results-in-round  ann

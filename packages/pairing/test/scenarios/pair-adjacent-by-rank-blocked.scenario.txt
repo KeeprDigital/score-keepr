@@ -1,0 +1,10 @@
+# 1 and 2 have already met. The closest alternative overall is 1 v 3, 2 v 4, 5 v 6.
+seed: s1   round: 5   config: no-rematch, pair-adjacent-by-rank
+
+entrant  score  rank  faced
+ann      9      1     ben
+ben      9      2
+cal      9      3
+dee      9      4
+eve      9      5
+fay      9      6

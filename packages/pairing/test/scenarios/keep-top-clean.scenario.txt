@@ -1,0 +1,12 @@
+# One Pair-down is unavoidable. It can sit high (6 v 3, Bye to dee) or low (3 v 0, Bye to
+# someone on 6). Keep top clean puts it low.
+seed: s1   round: 3   config: pair-close-in-score, keep-top-clean
+
+entrant  score
+ann      6
+ben      6
+cal      6
+dee      0
+eve      3
+fay      3
+gus      3

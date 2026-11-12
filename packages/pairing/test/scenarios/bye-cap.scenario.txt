@@ -1,0 +1,7 @@
+# ann and ben have each had a Bye, so it must go to cal.
+seed: s1   round: 3   config: bye-cap 1
+
+entrant  score  byes
+ann      0      1
+ben      0      1
+cal      0      0

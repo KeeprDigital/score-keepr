@@ -1,0 +1,5 @@
+rank  entrant  score  w-l-d  tiebreakers                  byes  faced
+1     ann      7      2-0-1  5/12  1/2  -  3946642187     -     ben cal dee
+2     ben      6      2-1-0  5/12  1/2  -  2369585635     -     ann dee cal
+3     cal      3      1-2-0  19/36  25/54  -  3564810431  -     dee ann ben
+4     dee      1      0-2-1  5/9  49/108  -  2563761241   -     cal ben ann

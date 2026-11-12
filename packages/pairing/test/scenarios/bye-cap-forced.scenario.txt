@@ -1,0 +1,5 @@
+# The only Entrant has already had a Bye. They get another and it is reported.
+seed: s1   round: 2   config: bye-cap 1
+
+entrant  score  byes
+ann      3      1

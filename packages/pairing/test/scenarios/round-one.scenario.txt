@@ -1,0 +1,10 @@
+# Nothing constrains anything, so Shuffle Positions alone decide.
+seed: s1   round: 1   config: none
+
+entrant  score
+ann      0
+ben      0
+cal      0
+dee      0
+eve      0
+fay      0

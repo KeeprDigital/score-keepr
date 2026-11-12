@@ -1,0 +1,8 @@
+# Both are from the same club. They are paired anyway and it is reported.
+# cal has no club, which is never a clash.
+seed: s1   round: 1   config: bye-to-lowest-score, avoid-same-group-label club
+
+entrant  score  club
+ann      3      red
+ben      3      red
+cal      0      -

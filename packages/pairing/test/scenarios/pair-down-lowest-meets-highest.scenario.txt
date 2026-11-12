@@ -1,0 +1,11 @@
+# Three on 6, three on 3. The Pair-down takes the lowest-ranked on 6 (cal)
+# against the highest-ranked on 3 (dee).
+seed: s1   round: 3   config: pair-close-in-score, pair-down-choice lowest highest
+
+entrant  score  rank
+ann      6      1
+ben      6      2
+cal      6      3
+dee      3      4
+eve      3      5
+fay      3      6

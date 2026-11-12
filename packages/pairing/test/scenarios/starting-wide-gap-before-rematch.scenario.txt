@@ -1,0 +1,8 @@
+# The only way to avoid a rematch is to pair top against bottom. Strict priority does exactly that.
+seed: s1   round: 4   config: starting
+
+entrant  score  faced
+ann      9      ben
+ben      9
+cal      0      dee
+dee      0

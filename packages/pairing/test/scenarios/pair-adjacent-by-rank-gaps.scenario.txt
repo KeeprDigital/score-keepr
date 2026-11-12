@@ -1,0 +1,10 @@
+# Ranks with gaps and a shared Rank. Only the order matters: 1 v 4, then the two on 7, then 9 v 20.
+seed: s1   round: 5   config: pair-adjacent-by-rank
+
+entrant  score  rank
+ann      9      1
+ben      9      4
+cal      9      7
+dee      9      7
+eve      9      9
+fay      9      20

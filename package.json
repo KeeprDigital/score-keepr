@@ -7,10 +7,14 @@
     "fix": "vp check --fix",
     "test": "vp test",
     "test:watch": "vp test watch",
+    "test:record": "vp test -u",
     "build": "vp run -r build",
-    "verify": "vp check && vp test && vp run -r build"
+    "verify": "vp check && vp test && vp run -r build",
+    "bench": "node packages/pairing/bench/simulate.ts"
   },
   "devDependencies": {
+    "@types/node": "26.6.6",
+    "fast-check": "4.10.2",
     "typescript": "7.0.2",
     "vite-plus": "1.5.1"
   },

@@ -1,0 +1,10 @@
+{
+  "name": "@score-keepr/testkit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Test helpers shared by the engines. Never published.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

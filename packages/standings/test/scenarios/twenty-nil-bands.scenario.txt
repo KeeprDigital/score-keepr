@@ -1,0 +1,9 @@
+# Twenty points are shared by how far apart the sides are on victory points.
+# 3 apart: 10 each. 8 apart: 11 and 9. 15 apart: 13 and 7. 40 apart: 20 and 0.
+config: twenty-nil
+
+round  result
+1      ann drew ben vp 50-47
+1      cal beat dee vp 58-50
+2      ann beat cal vp 65-50
+2      dee beat ben vp 70-30

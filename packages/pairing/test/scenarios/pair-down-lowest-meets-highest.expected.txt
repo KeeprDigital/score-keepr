@@ -1,0 +1,6 @@
+ann  v  ben
+cal  v  dee  pair-down, gap 3
+eve  v  fay
+bye: none
+violations: none
+proven best: yes

@@ -1,0 +1,7 @@
+# Level on Score. The Bye goes to the worst Rank.
+seed: s1   round: 2   config: bye-to-lowest-rank
+
+entrant  score  rank
+ann      3      1
+ben      3      3
+cal      3      2

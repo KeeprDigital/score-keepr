@@ -1,0 +1,11 @@
+# Seven Entrants. The Bye rule takes out the worst Rank, and the rest fold: 1 v 6, 2 v 5, 3 v 4.
+seed: s1   round: 1   config: bye-to-lowest-rank, pair-top-vs-bottom-by-rank
+
+entrant  score  rank
+ann      0      1
+ben      0      2
+cal      0      3
+dee      0      4
+eve      0      5
+fay      0      6
+gus      0      7

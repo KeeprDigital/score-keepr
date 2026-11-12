@@ -1,0 +1,8 @@
+# Three Entrants. ann and ben have not met, and ann v cal and ben v cal are rematches.
+# cal already has a Bye, but a second Bye is preferred to a rematch.
+seed: s1   round: 3   config: starting
+
+entrant  score  byes  faced
+ann      3      0     cal
+ben      3      0     cal
+cal      3      1

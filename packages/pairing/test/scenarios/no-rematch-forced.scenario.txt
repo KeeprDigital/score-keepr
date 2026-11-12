@@ -1,0 +1,6 @@
+# Only two Entrants and they have met. They are paired anyway and the rematch is reported.
+seed: s1   round: 2   config: no-rematch
+
+entrant  score  faced
+ann      3      ben
+ben      0

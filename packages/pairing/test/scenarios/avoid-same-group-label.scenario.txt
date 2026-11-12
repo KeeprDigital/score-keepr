@@ -1,0 +1,8 @@
+# Two from each club. Each must meet someone from the other club.
+seed: s1   round: 1   config: avoid-same-group-label club
+
+entrant  score  club
+ann      0      red
+ben      0      red
+cal      0      blue
+dee      0      blue

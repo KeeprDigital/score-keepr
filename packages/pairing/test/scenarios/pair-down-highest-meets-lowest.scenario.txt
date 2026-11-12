@@ -1,0 +1,10 @@
+# Same field. Now the highest-ranked on 6 (ann) meets the lowest-ranked on 3 (fay).
+seed: s1   round: 3   config: pair-close-in-score, pair-down-choice highest lowest
+
+entrant  score  rank
+ann      6      1
+ben      6      2
+cal      6      3
+dee      3      4
+eve      3      5
+fay      3      6

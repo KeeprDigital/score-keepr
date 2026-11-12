@@ -1,0 +1,10 @@
+# Same field with the order swapped. Now the Bye goes to the odd top group,
+# because that avoids any Pair-down. This is why the order matters.
+seed: s1   round: 2   config: pair-close-in-score, bye-to-lowest-score
+
+entrant  score
+ann      3
+ben      3
+cal      3
+dee      0
+eve      0

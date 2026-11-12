@@ -1,0 +1,8 @@
+# ann may not meet ben or cal, so ann meets dee.
+seed: s1   round: 1   config: avoid-listed-pairs   avoid: ann-ben, cal-ann, ann-zed
+
+entrant  score
+ann      0
+ben      0
+cal      0
+dee      0

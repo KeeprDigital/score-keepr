@@ -1,0 +1,10 @@
+# Two pods of three. Pods cross once, because two cannot be left unpaired.
+seed: s1   round: 1   config: prefer-same-group-label pod
+
+entrant  score  pod
+ann      0      one
+ben      0      one
+cal      0      one
+dee      0      two
+eve      0      two
+fay      0      two

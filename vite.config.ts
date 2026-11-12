@@ -5,7 +5,7 @@ import { testLint } from './tooling/lint/tests.ts'
 
 export default defineConfig({
   test: {
-    include: ['packages/*/src/**/*.test.ts'],
+    include: ['packages/*/src/**/*.test.ts', 'packages/*/test/**/*.test.ts'],
   },
   lint: {
     ignorePatterns: ['**/dist/**', 'prototype-matcher/**'],

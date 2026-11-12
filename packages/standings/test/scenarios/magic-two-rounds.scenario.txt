@@ -1,0 +1,10 @@
+# Magic's order: match points, opponents' match-win, game-win, opponents' game-win.
+# ann and cal both sit on 6 points. They are level on opponents' match-win, and ann's
+# cleaner game record (4 of 4 against 4 of 5) puts her first.
+config: magic
+
+round  result
+1      ann beat ben 2-0
+1      cal beat dee 2-1
+2      ann beat dee 2-0
+2      cal beat ben 2-0

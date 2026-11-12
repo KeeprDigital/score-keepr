@@ -1,0 +1,10 @@
+# ann meets ben twice and cal once. An opponent counts once per meeting, so ben's win rate
+# (none of two) counts twice in ann's average and cal's (one of two) once: a half over three,
+# which is 1/6. Counting ben only once would give 1/4.
+config: awarded-count
+
+round  result
+1      ann beat ben
+1      cal beat dee
+2      ann beat ben
+3      ann beat cal

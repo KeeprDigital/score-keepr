@@ -1,0 +1,6 @@
+# ann has two Results in round one, and the first Result has a draw the Configuration forbids.
+config: later-losses
+
+round  result
+1      ann drew ben
+1      ann beat cal

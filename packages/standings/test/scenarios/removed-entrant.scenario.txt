@@ -1,0 +1,7 @@
+# dee is removed. She has no Rank and no row, but cal still has her win over dee,
+# and dee still counts as cal's opponent.
+config: starting   removed: dee
+
+round  result
+1      ann beat ben
+1      cal beat dee

@@ -36,7 +36,7 @@ Per Entrant:
 | Fact | Details |
 |---|---|
 | id | String. Unique within the call. Must stay stable across rounds: Shuffle Positions come from it. |
-| Score | Whole number. May be negative. |
+| Score | Whole number from −1,000,000 to 1,000,000. The cap keeps every sum inside the engine exact. |
 | Opponents faced | Ids. May name Entrants not in this call; those are ignored. If A lists B and B is present, B must list A. |
 | Byes received | Whole number, zero or more. Whatever the Consumer chooses to count. Only compared with the bye cap. |
 | Rank | Optional whole number, 1 is best. Required only when a chosen Constraint uses Rank. Shared Ranks are allowed. |
@@ -51,7 +51,7 @@ Per call:
 | Random Seed | String. Required. |
 | Round number | Feeds Shuffle Positions and is echoed back. Nothing else depends on it. |
 | Pairs to avoid | Pairs of ids. Used by "avoid listed pairs". |
-| Work limit | Optional, counted in steps, never in time. |
+| Work limit | Optional, counted in steps, never in time. Left out, a built-in ceiling applies. |
 
 Constraints that apply only in some rounds (club avoidance in rounds one and two only, pair by Rank in the last round) are the Consumer sending a different Configuration for that call.
 
@@ -80,7 +80,7 @@ The v1 catalogue. A Constraint left out of the Configuration is not applied at a
 - Shuffle Positions always decide last and are not part of the Configuration (ADR 0005).
 - "No rematch" is yes or no per Pairing. Two earlier meetings count the same as one.
 - With an odd count, the pair-by-Rank Constraints leave out the Bye recipient and pair the rest.
-- The exact formula for every measure is written in the rule text that ships with the engine.
+- The exact formula for every measure is in `packages/pairing/RULES.md`.
 
 ### Priority
 
@@ -117,6 +117,8 @@ A result holds:
 
 "Proven best" means no other set of Pairings does better under the priority order (ADR 0004). A proven Violation count is the lowest possible given every higher Constraint. It does not mean those particular Entrants had to be the ones.
 
+**The built-in ceiling.** With no work limit given, a field is allowed 50,000 steps plus 2,000 for each Entrant times the number of binary digits in the count. It exists so a fault inside the matcher can never hang a call; the worst outcome is a result marked not proven. Every loop in the matcher that could run away counts a step. It is far above anything measured: whole events of up to 20,001 Entrants stay under a twentieth of it, and the heaviest case found reaches a fifth. A Consumer who wants more, or less, passes a work limit.
+
 If the work limit is hit, the engine still returns a complete, valid set of Pairings, made by a quick simple method and marked not proven. Its Violations are listed but not claimed to be unavoidable. The Consumer handles real timeouts by running the engine in a worker and killing it.
 
 ### Small fields
@@ -132,6 +134,7 @@ If the work limit is hit, the engine still returns a complete, valid set of Pair
 - An Entrant listing itself as an opponent.
 - An unknown Constraint, or the same Constraint twice in one Configuration. A Group Label Constraint may appear once per kind.
 - Configuration missing, or a Constraint with a setting missing.
+- A field the engine does not know, at any level. Nothing is silently ignored.
 - Any other malformed input.
 
 A pair to avoid that names an absent Entrant is ignored, like an absent opponent.
@@ -196,7 +199,7 @@ type RoundResult =
       ok: true
       pairings: { entrants: [string, string]; scoreGap: number }[]  // scoreGap above 0 marks a Pair-down
       bye: string | null
-      violations: { constraint: string; entrants: string[] }[]
+      violations: { constraint: Constraint; entrants: string[] }[]
       provenBest: boolean
       round: number
       engineVersion: string
@@ -223,7 +226,11 @@ type CheckResult =
       coverage: { missing: string[]; repeated: string[]; unknown: string[]; byesExpected: number }
       pairings: { entrants: [string, string]; scoreGap: number }[]
       violations: { constraint: string; entrants: string[] }[]
-      comparison?: { provenBest: boolean; constraints: { constraint: string; given: number; best: number }[] }
+      comparison?: {
+        asGoodAsBest: boolean   // exact, whatever the size of the numbers below
+        provenBest: boolean
+        levels: { constraint: Constraint; part?: 'from' | 'opponent'; given: number; best: number }[]
+      }
       engineVersion: string
     }
 ```
@@ -252,12 +259,37 @@ Development tooling may have dependencies. The shipped packages have no third-pa
 
 - Target: 10,000 Entrants in 2 s and 20,000 in 10 s per round, one thread, mid-range laptop, checked by a benchmark in CI.
 - If exactness and speed ever conflict, exactness wins and the time target loosens.
-- The prototype met the target with room to spare, on a fast machine and the starting Configuration only. Figures and limits: `prototype-matcher/README.md`.
+- Measured on the engine itself, whole call including input checks (Apple M4, Node 26, one thread, simulated event with drops, starting Configuration):
+
+| Entrants | Rounds | Slowest round |
+|---|---|---|
+| 2,001 | 9 | under 0.1 s |
+| 10,001 | 15 | 0.3 to 0.7 s |
+| 20,001 | 15 | 1.1 to 2.1 s |
+| 50,000 | 6 | 4.0 s |
+
+Every round was proven best. `pnpm bench <entrants> <rounds> --check` repeats it and fails if a round is unproven or over target.
+
+Other Configurations, one round each, same machine. All were proven best:
+
+| Configuration | 2,001 Entrants | 6,001 | 20,001 |
+|---|---|---|---|
+| Starting | 0.1 s | 0.2 s | 0.4 s |
+| Avoid same club, then starting | 0.1 s | 0.2 s | 0.4 s |
+| A last round: no rematch, Bye cap, Bye to lowest Rank, pair adjacent by Rank | under 0.1 s | 0.1 s | 0.2 s |
+| Starting with a Pair-down choice by Rank | 0.1 s | 0.9 s | 1.0 s |
+| Prefer same pod (pods of 8), then starting | 0.1 s | 0.2 s | 1.5 s |
+| Pair top vs bottom by Rank | under 0.1 s | under 0.1 s | 0.1 s |
+| Bye to lowest Rank, then top vs bottom | 0.1 s | 0.9 s | 0.8 s |
+| Pair adjacent by Rank, odd count, nothing said about the Bye | 0.1 s | 0.6 s | 10 s |
+
+The matcher is first offered opponents by what the levels reward: near in Score and Shuffle Position, near along any level that measures a distance such as Rank, and sharing any Group Label that is rewarded. The proof step rules Pairings out the same ways.
+
+The last row is the one slow case left. With an odd count and no Bye rule, every second Entrant is an equally good choice for the Bye as far as Rank goes, and each choice shifts every Pairing below it. Shuffle Positions decide between about ten thousand candidates that each differ in thousands of Pairings. A real Configuration states a Bye rule, which removes the choice.
 
 Not yet shown:
 
-- Speed on a mid-range laptop or in a browser.
-- Speed for any Constraint outside the starting Configuration. The proof step is fast because of how those Constraints are shaped; group labels, listed pairs and Rank Constraints are untested.
+- Speed on a mid-range laptop or in a browser. The M4 is faster than the target machine.
 
 ## Shared package
 
@@ -267,8 +299,8 @@ Both engines use it. It uses nothing.
 - **Each engine's input and output types**, defined separately on top of those. A Standings row and a pairing Entrant are different types, so each side can change its own shape.
 - **The seeded-random routine** behind Shuffle Positions and the random Tiebreaker. Changing it changes both engines' output.
 - **Mapping functions**:
-  - Standings rows to Entrants for a Swiss round. The Consumer says who is present and supplies Group Labels.
-  - Standings rows to Entrants for a Single Elimination cut of the top N. If the cut line falls between Entrants sharing a Rank, it returns an error rather than choosing.
+  - `pairingEntrantsFrom`: Standings rows to Entrants for a Swiss round. The Consumer says who is present and supplies Group Labels.
+  - `topCutFrom`: Standings rows to Entrants for a Single Elimination cut of the top N. If the cut line falls between Entrants sharing a Rank, or two inside the cut share one, it returns an error rather than choosing.
 
 The Pairing Engine knows nothing about Standings and accepts facts from anywhere. More mappers can be added without breaking anything.
 

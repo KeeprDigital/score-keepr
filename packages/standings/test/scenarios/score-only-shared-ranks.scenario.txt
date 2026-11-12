@@ -1,0 +1,7 @@
+# No Tiebreakers at all: everyone level on Score shares a Rank, and the next Rank skips ahead.
+config: score-only
+
+round  result
+1      ann beat ben
+1      cal beat dee
+1      eve drew fay
