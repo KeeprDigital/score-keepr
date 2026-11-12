@@ -1,6 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, test } from 'vite-plus/test'
 
+import { checkPairings, startingConfiguration } from '../src/index.ts'
 import type { Constraint, RoundInput, RoundSuccess } from '../src/index.ts'
 import { reordered, round } from './support/arbitraries.ts'
 import { broken, compareInOrder, everyArrangement, type Arrangement } from './support/reference.ts'
@@ -161,6 +162,133 @@ describe('rules that hold for every Swiss round', () => {
       }),
       RUNS,
     )
+  })
+})
+
+describe('the same rules on larger fields, which go through the fast matcher', () => {
+  const larger = round({ minEntrants: 9, maxEntrants: 40 })
+  const FEWER = { numRuns: 150 }
+
+  test('every Entrant appears exactly once, with a Bye exactly when the count is odd', () => {
+    fc.assert(
+      fc.property(larger, (input) => {
+        const result = mustPair(input)
+        const seen = [
+          ...result.pairings.flatMap((pairing) => pairing.entrants),
+          ...(result.bye === null ? [] : [result.bye]),
+        ]
+        expect([...seen].sort((a, b) => a.localeCompare(b))).toEqual(
+          input.entrants.map((entrant) => entrant.id),
+        )
+        expect(result.bye !== null).toBe(input.entrants.length % 2 === 1)
+      }),
+      FEWER,
+    )
+  })
+
+  test('every result is proven best', () => {
+    fc.assert(
+      fc.property(larger, (input) => {
+        expect(mustPair(input).provenBest).toBe(true)
+      }),
+      FEWER,
+    )
+  })
+
+  test('Pairings come highest Score first, each with the higher Score first and the true gap', () => {
+    fc.assert(
+      fc.property(larger, (input) => {
+        const { pairings } = mustPair(input)
+        const tops = pairings.map((pairing) => scoreOf(input, pairing.entrants[0]))
+        expect(tops).toEqual([...tops].sort((a, b) => b - a))
+        expect(pairings.map((pairing) => pairing.scoreGap)).toEqual(
+          pairings.map(
+            (pairing) => scoreOf(input, pairing.entrants[0]) - scoreOf(input, pairing.entrants[1]),
+          ),
+        )
+        expect(pairings.every((pairing) => pairing.scoreGap >= 0)).toBe(true)
+      }),
+      FEWER,
+    )
+  })
+
+  test('the same input always gives the same output, and the input is left untouched', () => {
+    fc.assert(
+      fc.property(larger, (input) => {
+        const before = structuredClone(input)
+        expect(mustPair(structuredClone(input))).toEqual(mustPair(input))
+        expect(input).toEqual(before)
+      }),
+      FEWER,
+    )
+  })
+
+  test('the order anything arrives in never matters', () => {
+    fc.assert(
+      fc.property(
+        larger.chain((input) => fc.tuple(fc.constant(input), reordered(input))),
+        ([input, shuffled]) => {
+          expect(mustPair(shuffled)).toEqual(mustPair(input))
+        },
+      ),
+      FEWER,
+    )
+  })
+
+  test('the Violations reported are exactly the ones that happened', () => {
+    fc.assert(
+      fc.property(larger, (input) => {
+        const result = mustPair(input)
+        const expected = input.configuration.flatMap((constraint) =>
+          (broken(constraint, input, arrangementOf(result)) ?? []).map((entrants) => ({
+            constraint,
+            entrants,
+          })),
+        )
+        expect(result.violations).toEqual(expected)
+      }),
+      FEWER,
+    )
+  })
+
+  test('checking the answer finds nothing better', () => {
+    fc.assert(
+      fc.property(larger, (input) => {
+        const paired = mustPair(input)
+        const checked = checkPairings({
+          ...input,
+          pairings: paired.pairings.map((pairing) => pairing.entrants),
+          byes: paired.bye === null ? [] : [paired.bye],
+          compare: true,
+        })
+        expect(checked.ok && checked.comparison).toMatchObject({
+          asGoodAsBest: true,
+          provenBest: true,
+        })
+      }),
+      FEWER,
+    )
+  })
+
+  test('a field of several hundred is paired and proven', () => {
+    const input: RoundInput = {
+      system: 'swiss',
+      entrants: Array.from({ length: 501 }, (_, at) => ({
+        id: `e${String(at).padStart(3, '0')}`,
+        score: 3 * (at % 5),
+        opponents: [],
+        byes: at % 7 === 0 ? 1 : 0,
+      })),
+      configuration: startingConfiguration,
+      randomSeed: 'big',
+      round: 5,
+    }
+    const result = mustPair(input)
+    expect(result.provenBest).toBe(true)
+    expect(result.pairings).toHaveLength(250)
+    expect(result.violations).toEqual([])
+    // Five Score Groups of about 100: with an odd total, one Entrant on the lowest Score has the Bye.
+    expect(scoreOf(input, result.bye as string)).toBe(0)
   })
 })
 

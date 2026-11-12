@@ -1,14 +1,18 @@
 import type { Constraint, RoundInput, RoundResult } from '@score-keepr/shared'
 
-import { levelsOf } from './cost.ts'
+import { levelsOf, type Level } from './cost.ts'
 import { solveExhaustive, type Mates } from './exhaustive.ts'
 import { pairInScoreOrder } from './fallback.ts'
 import { buildField, type Field } from './field.ts'
+import { solveByMatching } from './matching/solve.ts'
 import { describeResult } from './result.ts'
 import { parseRoundInput } from './validate.ts'
 
-/** Fields up to this size are solved by trying every possible set of Pairings. */
-const EXHAUSTIVE_SIZE = 14
+/**
+ * Fields up to this size are solved by trying every possible set of Pairings. Larger fields go
+ * to the fast matcher, which is tested to agree with that search.
+ */
+const EXHAUSTIVE_SIZE = 8
 
 /**
  * Pairs one round of a Round-by-Round System.
@@ -47,13 +51,23 @@ export function solveField(
   configuration: readonly Constraint[],
   workLimit: number | undefined,
 ): { mates: Mates; proven: boolean } {
+  const levels = levelsOf(configuration, field)
   const best =
     field.size <= EXHAUSTIVE_SIZE
-      ? solveExhaustive(
-          field.size,
-          levelsOf(configuration, field),
-          workLimit ?? Number.POSITIVE_INFINITY,
-        )
-      : undefined
+      ? solveExhaustive(field.size, levels, workLimit ?? Number.POSITIVE_INFINITY)
+      : matchOrUndefined(field, levels, workLimit)
   return { mates: best ?? pairInScoreOrder(field), proven: best !== undefined }
+}
+
+/** The fast matcher, with any failure inside it turned into "not proven" rather than an error. */
+function matchOrUndefined(
+  field: Field,
+  levels: readonly Level[],
+  workLimit: number | undefined,
+): Mates | undefined {
+  try {
+    return solveByMatching(field, levels, workLimit === undefined ? {} : { maxSteps: workLimit })
+  } catch {
+    return undefined
+  }
 }

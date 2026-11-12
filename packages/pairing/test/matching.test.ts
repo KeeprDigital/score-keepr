@@ -173,6 +173,33 @@ describe('solveMatching', () => {
     const solution = solveMatching(graph) as NonNullable<ReturnType<typeof solveMatching>>
     expect(verifyMatching(graph, solution)).toBeUndefined()
     solution.dual[0] = (solution.dual[0] as number) - 1
-    expect(verifyMatching(graph, solution)).toBeTypeOf('string')
+    expect(verifyMatching(graph, solution)).toMatch(/could be improved/)
+  })
+
+  type Solution = NonNullable<ReturnType<typeof solveMatching>>
+
+  test.each<[string, (solution: Solution) => void, RegExp]>([
+    [
+      'a matched edge left slack',
+      (solution) => (solution.dual[0] = (solution.dual[0] as number) + 2),
+      /not tight/,
+    ],
+    [
+      'a number that is not exact',
+      (solution) => (solution.dual[0] = (solution.dual[0] as number) + 0.1),
+      /not exact/,
+    ],
+    ['a number too large to add exactly', (solution) => (solution.dual[0] = 2 ** 50), /not exact/],
+    ['a vertex left unmatched', (solution) => (solution.mate[0] = -1), /unmatched/],
+  ])('a proof with %s does not check out', (_, tamper, reason) => {
+    const graph = graphOf(4, 1, [
+      { a: 0, b: 1, weight: [-1] },
+      { a: 2, b: 3, weight: [-1] },
+      { a: 1, b: 2, weight: [0] },
+      { a: 3, b: 0, weight: [-5] },
+    ])
+    const solution = solveMatching(graph) as Solution
+    tamper(solution)
+    expect(verifyMatching(graph, solution)).toMatch(reason)
   })
 })

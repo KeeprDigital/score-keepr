@@ -1,0 +1,110 @@
+import fc from 'fast-check'
+import { describe, expect, test } from 'vite-plus/test'
+
+import { levelsOf, type Level } from '../src/cost.ts'
+import { solveExhaustive, type Mates } from '../src/exhaustive.ts'
+import { buildField } from '../src/field.ts'
+import { solveByMatching } from '../src/matching/solve.ts'
+import type { RoundInput } from '../src/index.ts'
+import { round } from './support/arbitraries.ts'
+
+/** What a set of Pairings scores on every level, added exactly. */
+function costOf(levels: readonly Level[], mates: Mates): bigint[] {
+  return levels.map((level) => {
+    let total = 0n
+    for (const [a, b] of mates.entries()) {
+      if (b === -1) total += BigInt(level.bye(a))
+      else if (a < b) total += BigInt(level.pair(a, b))
+    }
+    return total
+  })
+}
+
+function prepare(input: RoundInput): { size: number; levels: Level[] } {
+  const field = buildField(input)
+  return { size: field.size, levels: levelsOf(input.configuration, field) }
+}
+
+describe('the fast matcher against the slow exact solver', () => {
+  test('with every Pairing in the graph, it finds the same best cost', () => {
+    fc.assert(
+      fc.property(round({ maxEntrants: 10 }), (input) => {
+        const field = buildField(input)
+        const levels = levelsOf(input.configuration, field)
+        const slow = solveExhaustive(field.size, levels, Number.POSITIVE_INFINITY) as Mates
+        const fast = solveByMatching(field, levels) as Mates
+        expect(fast).toBeDefined()
+        expect(costOf(levels, fast)).toEqual(costOf(levels, slow))
+      }),
+      { numRuns: 1500 },
+    )
+  })
+
+  test('with a sparse graph and the proof step, it still finds the same best cost', () => {
+    fc.assert(
+      fc.property(round({ maxEntrants: 11 }), (input) => {
+        const field = buildField(input)
+        const levels = levelsOf(input.configuration, field)
+        const slow = solveExhaustive(field.size, levels, Number.POSITIVE_INFINITY) as Mates
+        const fast = solveByMatching(field, levels, { completeUpTo: 0 }) as Mates
+        expect(fast).toBeDefined()
+        expect(costOf(levels, fast)).toEqual(costOf(levels, slow))
+      }),
+      { numRuns: 1500 },
+    )
+  })
+
+  test('on medium fields, the sparse graph gives the same cost as the graph with everything in it', () => {
+    fc.assert(
+      fc.property(round({ minEntrants: 20, maxEntrants: 70 }), (input) => {
+        const field = buildField(input)
+        const levels = levelsOf(input.configuration, field)
+        const everything = solveByMatching(field, levels, { completeUpTo: 1000 }) as Mates
+        const sparse = solveByMatching(field, levels, { completeUpTo: 0 }) as Mates
+        expect(everything).toBeDefined()
+        expect(sparse).toBeDefined()
+        expect(costOf(levels, sparse)).toEqual(costOf(levels, everything))
+      }),
+      { numRuns: 200 },
+    )
+  })
+
+  test('starting from far too few Pairings, the proof step repairs the graph to the same best cost', () => {
+    fc.assert(
+      fc.property(round({ minEntrants: 6, maxEntrants: 12 }), (input) => {
+        const field = buildField(input)
+        const levels = levelsOf(input.configuration, field)
+        const slow = solveExhaustive(field.size, levels, Number.POSITIVE_INFINITY) as Mates
+        const fast = solveByMatching(field, levels, { completeUpTo: 0, neighbours: 1 }) as Mates
+        expect(fast).toBeDefined()
+        expect(costOf(levels, fast)).toEqual(costOf(levels, slow))
+      }),
+      { numRuns: 1500 },
+    )
+  })
+
+  test('the same holds on medium fields', () => {
+    fc.assert(
+      fc.property(round({ minEntrants: 20, maxEntrants: 60 }), (input) => {
+        const field = buildField(input)
+        const levels = levelsOf(input.configuration, field)
+        const everything = solveByMatching(field, levels, { completeUpTo: 1000 }) as Mates
+        const thin = solveByMatching(field, levels, { completeUpTo: 0, neighbours: 1 }) as Mates
+        expect(thin).toBeDefined()
+        expect(costOf(levels, thin)).toEqual(costOf(levels, everything))
+      }),
+      { numRuns: 200 },
+    )
+  })
+
+  test('stops and says so when the work allowed runs out', () => {
+    fc.assert(
+      fc.property(round({ minEntrants: 4, maxEntrants: 12 }), (input) => {
+        const { size, levels } = prepare(input)
+        fc.pre(size > 0)
+        expect(solveByMatching(buildField(input), levels, { maxSteps: 0 })).toBeUndefined()
+      }),
+      { numRuns: 50 },
+    )
+  })
+})

@@ -39,6 +39,7 @@ export function configuration(ranked: boolean): fc.Arbitrary<Constraint[]> {
 }
 
 export type RoundOptions = {
+  minEntrants?: number
   maxEntrants?: number
   /** Give this Configuration instead of a random one. */
   configuration?: Constraint[]
@@ -53,16 +54,19 @@ export type RoundOptions = {
  * consistent history, and random pairs to avoid.
  */
 export function round(options: RoundOptions = {}): fc.Arbitrary<RoundInput> {
-  const { maxEntrants = 8 } = options
+  const { minEntrants = 0, maxEntrants = 8 } = options
   return fc
     .record({
-      size: fc.integer({ min: 0, max: maxEntrants }),
+      size: fc.integer({ min: minEntrants, max: maxEntrants }),
       ranked: options.ranked === undefined ? fc.boolean() : fc.constant(options.ranked),
       seed: fc.string({ maxLength: 4 }),
       round: fc.integer({ min: 1, max: 9 }),
     })
     .chain(({ size, ranked, seed, round: roundNumber }) => {
-      const ids = NAMES.slice(0, size)
+      const ids =
+        size <= NAMES.length
+          ? NAMES.slice(0, size)
+          : Array.from({ length: size }, (_, at) => `e${String(at).padStart(3, '0')}`)
       const pairs = ids.flatMap((a, at) => ids.slice(at + 1).map((b): [string, string] => [a, b]))
       return fc.record({
         system: fc.constant('swiss' as const),
