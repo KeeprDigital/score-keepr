@@ -1,0 +1,43 @@
+# score-keepr
+
+Tournament engines: one decides who plays whom, one works out the standings. Both are pure functions with no runtime dependencies outside this repository.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `packages/pairing` | Pairing Engine: Swiss, Single Elimination, checking hand-made Pairings. |
+| `packages/standings` | Standings Engine: Standings and Final Placings. |
+| `packages/shared` | Types, the seeded-random routine and mapping functions both engines use. |
+| `tooling/` | Shared pieces of build and lint config, imported by the `vite.config.ts` files. |
+| `.vscode/` | Editor settings so format-on-save uses the root config. |
+| `docs/spec.md` | Pairing Engine spec. |
+| `docs/standings-spec.md` | Standings Engine spec. |
+| `docs/adr/` | Decision records. |
+| `GLOSSARY.md` | The project's vocabulary. Use these words. |
+| `prototype-matcher/` | Throwaway prototype of the matcher. Not part of the build. |
+
+The packages are placeholders. No engine code exists yet.
+
+## Commands
+
+Needs pnpm and Node 22.18+, 24.11+ or 26+.
+
+```
+pnpm install
+pnpm verify       # format, lint and type checks, then tests, then build
+pnpm check        # format, lint and type checks only
+pnpm fix          # apply formatting and lint fixes
+pnpm test
+pnpm test:watch
+pnpm build
+```
+
+All tooling is Vite+ (`vp`): Oxfmt, Oxlint with type checks, Vitest, and `vp pack` for builds, run across packages by `vp run`. Lint, format and test settings live in the root `vite.config.ts`; each package has its own for `pack`. Tests import from `vite-plus/test`.
+
+## Rules the setup enforces
+
+- `pairing` and `standings` each depend on `shared` only. Importing one from the other does not resolve.
+- Source is compiled against the language library alone. `console`, `fetch`, `process` and the DOM do not typecheck, so engine code cannot do I/O by accident.
+- Every export in a package states its types in full (isolated declarations). The build fails otherwise, and the check flags exported functions that leave them out. Type files are then written without TypeScript doing any inference.
+- Inside the workspace, packages are consumed as TypeScript source. `publishConfig` switches them to `dist` when published.

@@ -1,0 +1,12 @@
+packages:
+  - packages/*
+
+# Vite+ needs every copy of Vite and Vitest to be its own. Keep both in step with vite-plus.
+overrides:
+  'vite@*': npm:@voidzero-dev/vite-plus-core@1.5.1
+  'vitest@*': 5.1.0
+
+# Vite here is Vite+'s own core under an alias, so its version number never matches what Vitest asks for.
+peerDependencyRules:
+  allowedVersions:
+    vite: '*'
