@@ -1,0 +1,7 @@
+# Five Entrants. eve has the Bye in round one. fay is registered but has no Results.
+config: starting   entrants: fay
+
+round  result
+1      ann beat ben
+1      cal beat dee
+1      eve bye

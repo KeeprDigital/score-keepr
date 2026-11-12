@@ -1,0 +1,5 @@
+rank  entrant  score  w-l-d  tiebreakers   byes  faced
+1     ann      9      3-0-0  11/27  49/81  -     ben cal dee
+2     ben      4      1-1-1  16/27  44/81  -     ann dee cal
+2     cal      4      1-1-1  16/27  44/81  -     dee ann ben
+4     dee      0      0-3-0  17/27  43/81  -     cal ben ann

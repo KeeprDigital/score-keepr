@@ -1,0 +1,11 @@
+# Pokémon's order: match points, opponents' win percentage, opponents' opponents' win
+# percentage, head-to-head, then random. A draw earns a point but nothing in a win percentage.
+config: pokemon   planned: 3   seed: s1
+
+round  result
+1      ann beat ben
+1      cal beat dee
+2      ann beat cal
+2      ben beat dee
+3      ann drew dee
+3      ben beat cal

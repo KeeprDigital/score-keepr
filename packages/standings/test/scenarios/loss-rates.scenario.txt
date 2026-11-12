@@ -1,0 +1,10 @@
+# Lower is better. eve's Bye is not a round played, so her one played round, a loss, gives
+# her a loss rate of 1. ben and cal are level on everything and share a Rank.
+config: loss-rates
+
+round  result
+1      ann beat ben
+1      cal beat dee
+1      eve bye
+2      ann beat cal
+2      ben beat eve

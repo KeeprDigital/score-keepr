@@ -1,0 +1,8 @@
+# Points come from the game score: 2-0 earns 7, a split earns 3 each, a win and a draw 4 and 1.
+config: two-game
+
+round  result
+1      ann beat ben 2-0
+1      cal drew dee 1-1
+2      ann beat cal 1-0-1
+2      dee beat ben 2-0

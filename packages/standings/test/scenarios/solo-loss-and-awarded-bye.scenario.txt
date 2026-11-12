@@ -1,0 +1,9 @@
+# ann was awarded a Bye, which does not count as a Bye received here. ben arrived late and
+# was given a loss. cal has a normal Bye.
+config: starting
+
+round  result
+1      ann awarded-bye
+1      ben loss
+1      cal bye
+1      dee beat eve

@@ -1,0 +1,12 @@
+# ann and ben are level on Score and wins, and ann beat ben, so ann ranks higher.
+# cal and dee are level too, but they drew both times they met, so head-to-head says nothing
+# and the seeded random order decides.
+config: head-to-head   seed: s1
+
+round  result
+1      ann beat ben
+1      cal drew dee
+1      eve beat fay
+2      ben beat fay
+2      eve beat ann
+2      cal drew dee

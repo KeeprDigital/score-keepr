@@ -1,0 +1,11 @@
+# ben wins his first two rounds and drops. Over the rounds he played he is on 100%, but a
+# dropped Entrant counts for at most 75% in his opponents' figures.
+config: pokemon   planned: 3   seed: s1   dropped: ben 2
+
+round  result
+1      ben beat ann
+1      cal beat dee
+2      ben beat cal
+2      ann beat dee
+3      ann beat cal
+3      dee bye

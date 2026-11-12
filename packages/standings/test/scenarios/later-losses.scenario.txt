@@ -1,0 +1,10 @@
+# All three have won two and lost one. Losing later ranks higher: the value is the round number squared.
+config: later-losses
+
+round  result
+1      cal beat ann
+1      ben beat dee
+2      ann beat ben
+2      cal beat dee
+3      ann beat dee
+3      ben beat cal

@@ -1,0 +1,7 @@
+# Score is wins. Then margin of victory, then victory points scored, then those conceded.
+# ann and cal have a win each: ann won by 30, cal by 10.
+config: wargame
+
+round  result
+1      ann beat ben vp 80-50
+1      cal beat dee vp 60-50

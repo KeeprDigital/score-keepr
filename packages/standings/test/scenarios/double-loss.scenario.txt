@@ -1,0 +1,6 @@
+# Both sides lose. Neither earns points and both have a loss on their record.
+config: later-losses
+
+round  result
+1      ann and ben both lost
+1      cal beat dee

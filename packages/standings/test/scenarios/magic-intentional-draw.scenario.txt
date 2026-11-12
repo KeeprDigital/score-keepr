@@ -1,0 +1,7 @@
+# An intentional draw is reported as three drawn games: one game point each from three, so a
+# third of the game points, which sits exactly on the minimum of 0.33.
+config: magic
+
+round  result
+1      ann drew ben 0-0-3
+1      cal beat dee 2-0

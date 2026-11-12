@@ -1,0 +1,6 @@
+# Score is simply the victory points scored. The winner of a match is not what counts.
+config: points-are-vp
+
+round  result
+1      ann beat ben vp 60-55
+1      cal beat dee vp 90-10

@@ -1,0 +1,11 @@
+# Four Entrants, three rounds, everyone plays everyone.
+# ann wins all three. ben and cal each win one and draw each other. dee loses all.
+config: starting
+
+round  result
+1      ann beat ben
+1      cal beat dee
+2      ann beat cal
+2      ben beat dee
+3      ann beat dee
+3      ben drew cal

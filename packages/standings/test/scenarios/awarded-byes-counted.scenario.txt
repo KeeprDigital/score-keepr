@@ -1,0 +1,7 @@
+# The same idea with a Configuration that counts awarded Byes as Byes received.
+config: awarded-count
+
+round  result
+1      ann awarded-bye
+1      cal bye
+1      dee beat eve

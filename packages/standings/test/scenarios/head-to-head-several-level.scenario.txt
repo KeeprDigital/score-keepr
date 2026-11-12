@@ -1,0 +1,11 @@
+# ann, ben, cal and dee are all level on Score and wins. ann beat ben, but head-to-head only
+# applies when exactly two are level, so it says nothing and the random order decides.
+config: head-to-head   seed: s1
+
+round  result
+1      ann beat ben
+1      cal beat dee
+2      ben beat dee
+2      eve beat cal
+3      eve beat ann
+3      dee beat fay
