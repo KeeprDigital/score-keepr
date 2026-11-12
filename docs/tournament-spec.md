@@ -8,8 +8,8 @@ Designed, not built. Every point here has been agreed.
 
 - **v1**:
   - Any number of Phases in any order, one at a time. Each is Swiss or Single Elimination.
-  - Sections: Entrants in a Phase paired in separate sets, which covers pods and divisions.
-  - Drops, returns, removals, late entries, awarded Byes, no-shows.
+  - Sections: Entrants in a Phase paired in separate sets, which covers Pods and divisions.
+  - Drops, returns, Removals, Late Entries, Awarded Byes, no-shows.
   - Hand-made Pairings, assessed by the Pairing Engine.
   - Corrections to earlier Results.
   - Table numbers.
@@ -52,7 +52,7 @@ The Log is the only truth (ADR 0008). Everything else is worked out from it and 
 - **Counter**: one more than the highest counter among everything the Device had seen.
 - **Combining**: two Logs combine by keeping every Action from both. An Action met twice counts once.
 - **Order**: by counter, then by Device id. An Action therefore always comes after everything its Device had seen. No clock is used.
-- An Action that had seen an earlier one about the same thing replaces it. That is how a correction or a re-pairing works.
+- An Action that had seen an earlier one about the same thing replaces it. That is how a Correction or a re-pairing works.
 - Two Actions about the same thing where neither had seen the other are a Clash. See Clashes.
 
 ## Actions
@@ -62,7 +62,7 @@ A fixed catalogue.
 | Action | What it records |
 |---|---|
 | Tournament created | The Random Seed. |
-| Entrant added | Id and labels, such as club or division. For a late entry, the running Phase and Section they join. |
+| Entrant added | Id and labels, such as club or division. For a Late Entry, the running Phase and Section they join. |
 | Entrant changed | New labels. |
 | Entrant dropped | The last round they take part in. |
 | Entrant returned | A dropped Entrant comes back. |
@@ -71,9 +71,9 @@ A fixed catalogue.
 | Phase changed | New planned rounds or Configurations. |
 | Phase ended | The Phase is over. |
 | Round paired | Pairings, Byes and tables for one Section's round, engine-made or hand-made, with the input used and the Pairing Engine's assessment. |
-| Result recorded | Outcome, games and extra scores for one Pairing. |
-| Round missed | An awarded Bye, or a loss with no opponent, for an Entrant not paired that round. |
-| Flag settled | The organiser accepts a flagged situation as it is. |
+| Result recorded | Outcome, games and Extra Scores for one Pairing. |
+| Unplayed round recorded | An Awarded Bye or an Unplayed Loss, for an Entrant not paired that round. |
+| Flag settled | The Organiser accepts a flagged situation as it is. |
 | Tournament finished | The final order as published. |
 
 ## Phases
@@ -108,7 +108,7 @@ Rank and Score come from the Standings of the Phases named as counting, as they 
 - A day two: a Swiss Phase entered by everyone on at least 19, counting day one.
 - Two drafts: two Swiss Phases, each with Sections of 8, the second made in Rank order.
 
-**Single Elimination**: the structure is built when the Phase starts and recorded in the Action. Winners fill later Slots as Results arrive. Entrants need different Ranks; if the line falls between Entrants who share one, starting the Phase is refused, and the organiser adds a Tiebreaker or hand-picks.
+**Single Elimination**: the structure is built when the Phase starts and recorded in the Action. Winners fill later Slots as Results arrive. Entrants need different Ranks; if the line falls between Entrants who share one, starting the Phase is refused, and the Organiser adds a Tiebreaker or hand-picks.
 
 A Single Elimination Result has one winner, or both lose. When both lose:
 
@@ -124,18 +124,18 @@ A Phase can split its Entrants into Sections. Each Section is paired on its own,
 
 A Section is made one of three ways:
 
-- by size, in Rank order
-- by size, at random, using the Random Seed
-- from a label the organiser supplies, which covers divisions
+- by size, in Rank order: a Pod
+- by size, at random, using the Random Seed: also a Pod
+- from a label the Organiser supplies, which covers divisions
 
 **By size**, the sizes come one of two ways:
 
 - **A range**: the smallest and largest allowed. Sections are as even as possible inside it. When no split fits, the largest is exceeded by as little as possible.
-- **An explicit list**: the organiser states the sizes, such as 8, 6 and 6. This reproduces any publisher's table exactly.
+- **An explicit list**: the Organiser states the sizes, such as 8, 6 and 6. This reproduces any publisher's table exactly.
 
 No one formula fits the publishers: Magic asks for pods "of roughly equal size", Lorcana publishes a table that is not even, and One Piece drafts in pods of four. Their tables can be added later as dated data.
 
-The organiser can move Entrants between Sections before the first round is paired.
+The Organiser can move Entrants between Sections before the first round is paired.
 
 Standings cover the whole Phase and can be filtered by Section.
 
@@ -147,7 +147,7 @@ Standings cover the whole Phase and can be filtered by Section.
 - **Same Log, same Pairings**: two Devices that had seen the same Log make identical Pairings.
 - **Hand-made Pairings** are recorded the same way, with the Pairing Engine's assessment: Violations, and whether they are as good as the best.
 - **A round is complete** when every Pairing in it has a Result. Pairing the next round before that is allowed and flagged.
-- **A missed round** counts as nothing until a "Round missed" Action says otherwise. This covers late entries and Entrants who sat a round out.
+- **An unplayed round** counts as nothing until an "Unplayed round recorded" Action says otherwise. This covers Late Entries and Entrants who sat a round out.
 - **No device is special.** Nothing limits which Device may pair a round (ADR 0008). The Consumer warns when someone pairs while out of contact with the others.
 
 ## Tables
@@ -157,18 +157,18 @@ Settings per Section:
 | Setting | Details |
 |---|---|
 | Order | Best-ranked Pairing first, or random by the Random Seed. |
-| Starting table | A number the organiser chooses. |
+| Starting table | A number the Organiser chooses. |
 | Unavailable tables | Skipped. |
 | Fixed tables | Named Entrants always sit at a given table. If both Entrants in a Pairing have one, the lower number is used. |
 | Avoid repeats | Optional. As few Entrants as possible are put on a table they have already played on. |
 
 A table is changed by hand by recording the round again with the same Pairings.
 
-## Results and corrections
+## Results and Corrections
 
-- A Result names its Pairing. A later Result for the same Pairing, from a Device that had seen the earlier one, is a correction and replaces it.
+- A Result names its Pairing. A later Result for the same Pairing, from a Device that had seen the earlier one, is a Correction and replaces it.
 - **Calculated things ripple** (ADR 0011). Standings, Tiebreakers and who fills a Single Elimination Slot always reflect the Results as they now stand.
-- **Decided things hold.** Pairings already made, who entered a Phase and how Sections were formed are recorded and never rewritten. Each one made from Standings that have since changed is flagged. The organiser can redo it with a new Action, or leave it.
+- **Decided things hold.** Pairings already made, who entered a Phase and how Sections were formed are recorded and never rewritten. Each one made from Standings that have since changed is flagged. The Organiser can redo it with a new Action, or leave it.
 - **Standings as they stood**: Standings can be worked out as any Action saw them, which reproduces the input of any earlier pairing call.
 
 ## Clashes
@@ -186,7 +186,7 @@ A Clash is two Actions about the same thing where neither had seen the other. No
 
 ## Flags
 
-A Flag asks an organiser to look at something. It never blocks anything. v1 raises:
+A Flag asks an Organiser to look at something. It never blocks anything. v1 raises:
 
 - A Result is disputed.
 - Pairings were set aside, or a Result is left without a Pairing.
@@ -196,7 +196,7 @@ A Flag asks an organiser to look at something. It never blocks anything. v1 rais
 - Hand-made Pairings break a Constraint, or are not as good as the best.
 - A set of Pairings is not proven best.
 - A setting was changed twice by Devices that had not seen each other.
-- In Single Elimination, a Result names an Entrant who is no longer in that Pairing after a correction.
+- In Single Elimination, a Result names an Entrant who is no longer in that Pairing after a Correction.
 
 A Flag is cleared by fixing its cause or by a "Flag settled" Action. A settled Flag comes back if its cause changes again.
 

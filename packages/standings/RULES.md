@@ -12,7 +12,7 @@ Every number here is exact. Fractions are kept as fractions and never rounded.
 - The round counts as played.
 - The record gains a win, a loss or a draw, by the side's Outcome.
 - The other Entrant is added to "opponents faced", however the Result ended.
-- Game scores and named extra scores are added up when given.
+- Game scores and Extra Scores are added up when given.
 
 **A Bye**, assigned or awarded:
 
@@ -20,7 +20,7 @@ Every number here is exact. Fractions are kept as fractions and never rounded.
 - The record gains a win.
 - If the Configuration says a Bye counts as played, the round counts as played and won, and its stated game score is added. If not, the round is left out of every rate.
 
-**A loss with no opponent**:
+**An Unplayed Loss**:
 
 - Score goes up by the Configuration's points for it.
 - The record gains a loss.

@@ -9,6 +9,6 @@ Points are always worked out by the Standings Engine, using a points method name
 
 ## Consequences
 
-- Every scoring scheme needs a points method in the catalogue. v1 has four: from the Outcome, from the game score, from the difference in a named extra score, and a named extra score itself.
+- Every scoring scheme needs a points method in the catalogue. v1 has four: from the Outcome, from the game score, from the difference in an Extra Score, and an Extra Score itself.
 - A scheme none of them expresses needs an engine release.
 - Tiebreaker values are returned as an exact fraction plus a plain number for display.
