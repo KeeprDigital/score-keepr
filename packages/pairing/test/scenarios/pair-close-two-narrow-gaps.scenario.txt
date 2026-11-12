@@ -1,0 +1,8 @@
+# One wide gap is worse than two narrow ones: 6 v 3 and 3 v 0, not 6 v 0 and 3 v 3.
+seed: s1   round: 3   config: pair-close-in-score
+
+entrant  score
+ann      6
+ben      3
+cal      3
+dee      0

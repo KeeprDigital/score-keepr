@@ -1,0 +1,6 @@
+ann  v  fay
+ben  v  eve
+cal  v  dee
+bye: gus
+violations: none
+proven best: yes

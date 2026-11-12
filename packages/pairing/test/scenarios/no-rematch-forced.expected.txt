@@ -1,0 +1,4 @@
+ann  v  ben  pair-down, gap 3
+bye: none
+violation: no-rematch  ann, ben
+proven best: yes

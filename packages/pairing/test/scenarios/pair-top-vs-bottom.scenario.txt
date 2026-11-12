@@ -1,0 +1,12 @@
+# 1 v 8, 2 v 7, 3 v 6, 4 v 5.
+seed: s1   round: 1   config: pair-top-vs-bottom-by-rank
+
+entrant  score  rank
+ann      0      1
+ben      0      2
+cal      0      3
+dee      0      4
+eve      0      5
+fay      0      6
+gus      0      7
+hal      0      8

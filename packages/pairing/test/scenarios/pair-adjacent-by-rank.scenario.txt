@@ -1,0 +1,10 @@
+# 1 v 2, 3 v 4, 5 v 6.
+seed: s1   round: 5   config: pair-adjacent-by-rank
+
+entrant  score  rank
+ann      9      1
+ben      9      2
+cal      9      3
+dee      9      4
+eve      9      5
+fay      9      6

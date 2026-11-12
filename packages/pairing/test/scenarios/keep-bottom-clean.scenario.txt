@@ -1,0 +1,11 @@
+# Same field. Keep bottom clean puts the Pair-down high: 6 v 3, and the Bye goes to dee.
+seed: s1   round: 3   config: pair-close-in-score, keep-bottom-clean
+
+entrant  score
+ann      6
+ben      6
+cal      6
+dee      0
+eve      3
+fay      3
+gus      3

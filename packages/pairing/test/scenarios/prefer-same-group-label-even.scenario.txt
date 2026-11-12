@@ -1,0 +1,8 @@
+# Two pods of two. Nobody leaves their pod.
+seed: s1   round: 1   config: prefer-same-group-label pod
+
+entrant  score  pod
+ann      0      one
+ben      0      two
+cal      0      one
+dee      0      two

@@ -1,0 +1,8 @@
+# One step is not enough to prove anything. A valid pairing still comes back, marked unproven.
+seed: s1   round: 1   config: starting   limit: 1
+
+entrant  score
+ann      3
+ben      3
+cal      0
+dee      0

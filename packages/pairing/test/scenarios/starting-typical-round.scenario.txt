@@ -1,0 +1,10 @@
+# Round three of five Entrants under the starting Configuration.
+# eve has had the Bye, so it goes to the next lowest Score that has not: dee.
+seed: s1   round: 3   config: starting
+
+entrant  score  byes  faced
+ann      6      0     cal dee
+ben      6      0     dee cal
+cal      3      0
+dee      0      0
+eve      3      1     -

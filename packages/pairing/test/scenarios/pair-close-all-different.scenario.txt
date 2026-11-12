@@ -1,0 +1,8 @@
+# Four different Scores: neighbours are paired, 9 v 6 and 3 v 0.
+seed: s1   round: 4   config: pair-close-in-score
+
+entrant  score
+ann      9
+ben      6
+cal      3
+dee      0

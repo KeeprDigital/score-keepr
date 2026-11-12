@@ -1,0 +1,6 @@
+# ann says she has faced ben, ben does not say he has faced ann.
+seed: s1   round: 2   config: starting   faced: as-written
+
+entrant  score  faced
+ann      3      ben
+ben      0

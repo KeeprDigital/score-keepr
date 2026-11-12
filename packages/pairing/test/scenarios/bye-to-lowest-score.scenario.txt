@@ -1,0 +1,7 @@
+# The Bye goes to the lowest Score, which leaves a Pair-down between ann and ben.
+seed: s1   round: 3   config: bye-to-lowest-score
+
+entrant  score
+ann      6
+ben      3
+cal      0

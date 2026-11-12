@@ -80,7 +80,7 @@ The v1 catalogue. A Constraint left out of the Configuration is not applied at a
 - Shuffle Positions always decide last and are not part of the Configuration (ADR 0005).
 - "No rematch" is yes or no per Pairing. Two earlier meetings count the same as one.
 - With an odd count, the pair-by-Rank Constraints leave out the Bye recipient and pair the rest.
-- The exact formula for every measure is written in the rule text that ships with the engine.
+- The exact formula for every measure is in `packages/pairing/RULES.md`.
 
 ### Priority
 
@@ -132,6 +132,7 @@ If the work limit is hit, the engine still returns a complete, valid set of Pair
 - An Entrant listing itself as an opponent.
 - An unknown Constraint, or the same Constraint twice in one Configuration. A Group Label Constraint may appear once per kind.
 - Configuration missing, or a Constraint with a setting missing.
+- A field the engine does not know, at any level. Nothing is silently ignored.
 - Any other malformed input.
 
 A pair to avoid that names an absent Entrant is ignored, like an absent opponent.
@@ -196,7 +197,7 @@ type RoundResult =
       ok: true
       pairings: { entrants: [string, string]; scoreGap: number }[]  // scoreGap above 0 marks a Pair-down
       bye: string | null
-      violations: { constraint: string; entrants: string[] }[]
+      violations: { constraint: Constraint; entrants: string[] }[]
       provenBest: boolean
       round: number
       engineVersion: string

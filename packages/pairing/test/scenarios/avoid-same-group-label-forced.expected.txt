@@ -1,0 +1,4 @@
+ben  v  ann
+bye: cal
+violation: avoid-same-group-label club  ben, ann
+proven best: yes

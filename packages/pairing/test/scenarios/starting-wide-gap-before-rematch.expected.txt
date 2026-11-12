@@ -1,0 +1,5 @@
+ben  v  dee  pair-down, gap 9
+ann  v  cal  pair-down, gap 9
+bye: none
+violations: none
+proven best: yes

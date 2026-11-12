@@ -1,0 +1,10 @@
+# Three on 3 and two on 0. With the Bye rule first, the Bye stays at the bottom
+# and one Entrant on 3 has to be paired down.
+seed: s1   round: 2   config: bye-to-lowest-score, pair-close-in-score
+
+entrant  score
+ann      3
+ben      3
+cal      3
+dee      0
+eve      0

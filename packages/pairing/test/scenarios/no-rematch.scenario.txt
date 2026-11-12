@@ -1,0 +1,8 @@
+# ann has faced ben and cal, so ann must meet dee. That leaves ben v cal.
+seed: s1   round: 3   config: no-rematch
+
+entrant  score  faced
+ann      0      ben cal
+ben      0
+cal      0
+dee      0
