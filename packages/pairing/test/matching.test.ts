@@ -1,7 +1,9 @@
 import fc from 'fast-check'
 import { describe, expect, test } from 'vite-plus/test'
 
-import { solveMatching, verifyMatching, type MatchingGraph } from '../src/matching/blossom.ts'
+import { solveMatching, type MatchingGraph } from '../src/matching/blossom.ts'
+import { layOutBlossoms } from '../src/matching/forest.ts'
+import { addSharedBlossoms, verifyMatching } from '../src/matching/verify.ts'
 
 type Edge = { a: number; b: number; weight: number[] }
 
@@ -160,6 +162,35 @@ describe('solveMatching', () => {
       }),
       { numRuns: 2000 },
     )
+  })
+
+  test('the laid-out blossoms give the same shared duals as walking up from each vertex', () => {
+    let withBlossoms = 0
+    fc.assert(
+      fc.property(anyGraph, ({ size, levels, edges }) => {
+        const solution = solveMatching(graphOf(size, levels, edges))
+        fc.pre(solution?.perfect === true)
+        const proof = solution as NonNullable<typeof solution>
+        const forest = layOutBlossoms(proof, size, levels, 0)
+        for (let a = 0; a < size; a++) {
+          for (let b = a + 1; b < size; b++) {
+            const walked = new Float64Array(levels)
+            addSharedBlossoms(walked, a, b, proof, levels)
+            const looked = new Float64Array(levels)
+            if (proof.inblossom[a] === proof.inblossom[b]) {
+              withBlossoms++
+              const shared = forest.lowestShared(a, b)
+              for (let c = 0; c < levels; c++)
+                looked[c] = 2 * (forest.sumFromTop[shared * levels + c] as number)
+            }
+            expect([...looked]).toEqual([...walked])
+          }
+        }
+      }),
+      { numRuns: 2000 },
+    )
+    // The comparison only means something if blossoms actually formed.
+    expect(withBlossoms).toBeGreaterThan(100)
   })
 
   test('a proof that has been tampered with does not check out', () => {

@@ -12,9 +12,18 @@ import type { Field } from './field.ts'
 export type Level = {
   pair(a: number, b: number): number
   bye(a: number): number
-  /** True when a Pairing's score depends on the two Scores and nothing else. */
-  scoreOnly?: boolean
+  /** Set when a Pairing's score has a form the matcher can use to rule Pairings out quickly. */
+  shape?: LevelShape
 }
+
+/** How a level scores a Pairing, for the forms the matcher knows how to exploit. */
+export type LevelShape =
+  /** It depends on the two Scores and nothing else. */
+  | { type: 'scores' }
+  /** It is the square of `from[a] - to[b]`, and comes out the same whichever is called `a`. */
+  | { type: 'line'; from: readonly number[]; to: readonly number[] }
+  /** It is 1 when both have a label and the labels are the `same`, or are `different`; else 0. */
+  | { type: 'labels'; label: readonly (string | undefined)[]; scoring: 'same' | 'different' }
 
 const NONE = (): number => 0
 const square = (value: number): number => value * value
@@ -84,7 +93,18 @@ export function levelsOf(configuration: readonly Constraint[], field: Field): Le
 function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
   const breaks = breaksOf(constraint, field)
   if (breaks !== undefined) {
-    return [{ pair: (a, b) => flag(breaks.pair(a, b)), bye: (a) => flag(breaks.bye(a)) }]
+    const level: Level = {
+      pair: (a, b) => flag(breaks.pair(a, b)),
+      bye: (a) => flag(breaks.bye(a)),
+    }
+    if (constraint.type === 'avoid-same-group-label') {
+      level.shape = {
+        type: 'labels',
+        label: field.groups.map((groups) => groups?.[constraint.kind]),
+        scoring: 'same',
+      }
+    }
+    return [level]
   }
 
   const score = (a: number): number => field.score[a] as number
@@ -100,6 +120,11 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
             return flag(mine !== undefined && theirs !== undefined && mine !== theirs)
           },
           bye: NONE,
+          shape: {
+            type: 'labels',
+            label: field.groups.map((groups) => groups?.[constraint.kind]),
+            scoring: 'different',
+          },
         },
       ]
     case 'bye-to-lowest-score':
@@ -109,13 +134,13 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
       return [{ pair: NONE, bye: (a) => worse[a] as number }]
     }
     case 'pair-close-in-score':
-      return [{ pair: (a, b) => square(score(a) - score(b)), bye: NONE, scoreOnly: true }]
+      return [{ pair: (a, b) => square(score(a) - score(b)), bye: NONE, shape: { type: 'scores' } }]
     case 'keep-top-clean':
       return [
         {
           pair: (a, b) => (pairDown(a, b) ? Math.max(score(a), score(b)) - field.minScore + 1 : 0),
           bye: NONE,
-          scoreOnly: true,
+          shape: { type: 'scores' },
         },
       ]
     case 'keep-bottom-clean':
@@ -123,7 +148,7 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
         {
           pair: (a, b) => (pairDown(a, b) ? field.maxScore - Math.min(score(a), score(b)) + 1 : 0),
           bye: NONE,
-          scoreOnly: true,
+          shape: { type: 'scores' },
         },
       ]
     case 'pair-adjacent-by-rank': {
@@ -132,6 +157,7 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
         {
           pair: (a, b) => square((place[a] as number) - (place[b] as number)),
           bye: NONE,
+          shape: { type: 'line', from: place, to: place },
         },
       ]
     }
@@ -142,6 +168,8 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
         {
           pair: (a, b) => square((place[a] as number) + (place[b] as number) - mirror),
           bye: NONE,
+          // The same thing seen as a distance: from an Entrant's place to the other's mirror image.
+          shape: { type: 'line', from: place, to: place.map((each) => mirror - each) },
         },
       ]
     }
@@ -168,30 +196,60 @@ function shuffleLevel(field: Field): Level {
   return {
     pair: (a, b) => square(position(a) - position(b)),
     bye: (a) => square(position(a)),
+    shape: { type: 'line', from: field.position, to: field.position },
   }
+}
+
+/** How many of the sorted values are strictly below `value`. */
+function countBelow(sorted: readonly number[], value: number): number {
+  let low = 0
+  let high = sorted.length
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if ((sorted[middle] as number) < value) low = middle + 1
+    else high = middle
+  }
+  return low
+}
+
+/** How many of the sorted values are strictly above `value`. */
+function countAbove(sorted: readonly number[], value: number): number {
+  let low = 0
+  let high = sorted.length
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if ((sorted[middle] as number) <= value) low = middle + 1
+    else high = middle
+  }
+  return sorted.length - low
 }
 
 /** For each Entrant, how many Entrants in the call have a strictly better Rank. */
 function countBetterRanked(field: Field): number[] {
-  return field.rank.map((mine) => field.rank.filter((other) => rankOf(other) < rankOf(mine)).length)
+  const sorted = field.rank.map(rankOf).sort((a, b) => a - b)
+  return field.rank.map((mine) => countBelow(sorted, rankOf(mine)))
 }
 
 /** For each Entrant, how many Entrants in the call have a strictly worse Rank. */
 function countWorseRanked(field: Field): number[] {
-  return field.rank.map((mine) => field.rank.filter((other) => rankOf(other) > rankOf(mine)).length)
+  const sorted = field.rank.map(rankOf).sort((a, b) => a - b)
+  return field.rank.map((mine) => countAbove(sorted, rankOf(mine)))
 }
 
 /** How far an Entrant is from being the one a Pair-down should pick from their Score Group. */
 function pickCost(pick: PairDownPick, field: Field): (a: number) => number {
   if (pick === 'random') return NONE
+  const ranksByScore = new Map<number, number[]>()
+  for (let a = 0; a < field.size; a++) {
+    const score = field.score[a] as number
+    const ranks = ranksByScore.get(score)
+    if (ranks === undefined) ranksByScore.set(score, [rankOf(field.rank[a])])
+    else ranks.push(rankOf(field.rank[a]))
+  }
+  for (const ranks of ranksByScore.values()) ranks.sort((a, b) => a - b)
   const cost = field.rank.map((mine, a) => {
-    let ahead = 0
-    for (let other = 0; other < field.size; other++) {
-      if (field.score[other] !== field.score[a]) continue
-      const theirs = rankOf(field.rank[other])
-      if (pick === 'highest' ? theirs < rankOf(mine) : theirs > rankOf(mine)) ahead++
-    }
-    return ahead
+    const group = ranksByScore.get(field.score[a] as number) as number[]
+    return pick === 'highest' ? countBelow(group, rankOf(mine)) : countAbove(group, rankOf(mine))
   })
   return (a) => cost[a] as number
 }

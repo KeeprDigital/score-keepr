@@ -516,17 +516,33 @@ export function solveMatching(
     pendingFree.push(b)
   }
 
+  // Blossoms can nest thousands deep, so this pair must not call each other: work still to do
+  // is kept in a list instead. `pending` holds blossoms to re-base, each followed by the
+  // vertex that must become its base.
+  const pending: number[] = []
+
+  /** Rearranges the matching inside blossom `b` so that vertex `v` becomes its base. */
   function augmentBlossom(b: number, v: number): void {
-    const chain: number[] = []
-    let t = v
-    while (t !== b) {
-      chain.push(t)
-      t = blossomparent[t]!
+    pending.push(b, v)
+    while (pending.length > 0) {
+      const vertex = pending.pop()!
+      const blossom = pending.pop()!
+      // From the vertex outwards, turn each blossom so the child holding the vertex comes first.
+      // Inner ones go first: an outer blossom takes its base from its first child.
+      let child = vertex
+      while (child !== blossom) {
+        const parent = blossomparent[child]!
+        rotateBlossom(parent, child)
+        child = parent
+      }
     }
-    chain.push(b)
-    for (let i = 1; i < chain.length; i++) rotateBlossom(chain[i]!, chain[i - 1]!)
   }
 
+  /**
+   * Turns blossom `b` so that `child` is its first child, re-matching the children it passes.
+   * Any child that is itself a blossom is queued to be re-based, not done here: that work only
+   * touches the inside of that child, so its order does not matter.
+   */
   function rotateBlossom(b: number, child: number): void {
     const childs = blossomchilds[b]!
     const endps = blossomendps[b]!
@@ -548,10 +564,10 @@ export function solveMatching(
       j += jstep
       let t = at(childs, j)
       const p = at(endps, j - endptrick) ^ endptrick
-      if (t >= N) augmentBlossom(t, endpoint[p]!)
+      if (t >= N) pending.push(t, endpoint[p]!)
       j += jstep
       t = at(childs, j)
-      if (t >= N) augmentBlossom(t, endpoint[p ^ 1]!)
+      if (t >= N) pending.push(t, endpoint[p ^ 1]!)
       mate[endpoint[p]!] = p ^ 1
       mate[endpoint[p ^ 1]!] = p
     }
@@ -904,93 +920,4 @@ export function solveMatching(
     if (!matched) return finish(false)
   }
   return finish(true)
-}
-
-/** Duals finer than a quarter, or this large, could make a sum inexact. Neither should occur. */
-const FINEST = 4
-const LARGEST: number = 2 ** 47
-
-/**
- * Checks the proof that comes with a perfect matching, on the graph it was solved on. Returns
- * undefined when the proof holds, otherwise a sentence saying what is wrong.
- *
- * The proof holds when: every number is exact; no edge could be improved on; every matched edge
- * is exactly tight; and every blossom that carries weight is as full as it can be.
- */
-export function verifyMatching(
-  graph: MatchingGraph,
-  solution: MatchingSolution,
-): string | undefined {
-  const N = graph.size
-  const K = graph.levels
-  const { dual, mate, endpoint, blossombase, blossomendps } = solution
-  const signOf = (row: ArrayLike<number>, from: number): number => {
-    for (let c = 0; c < K; c++) {
-      const value = row[from + c]!
-      if (value < 0) return -1
-      if (value > 0) return 1
-    }
-    return 0
-  }
-
-  for (let i = 0; i < dual.length; i++) {
-    const value = dual[i]!
-    if (!Number.isInteger(value * FINEST) || Math.abs(value) >= LARGEST)
-      return `dual ${i} is not exact: ${value}`
-  }
-  for (let i = 0; i < graph.weight.length; i++) {
-    const value = graph.weight[i]!
-    if (!Number.isInteger(value) || Math.abs(value) >= LARGEST)
-      return `weight ${i} is not exact: ${value}`
-  }
-  for (let v = 0; v < N; v++) if (mate[v] === -1) return `vertex ${v} is unmatched`
-  for (let b = N; b < 2 * N; b++) {
-    if (blossombase[b]! >= 0 && signOf(dual, b * K) < 0) return `blossom ${b} has a negative dual`
-  }
-
-  const slack = new Float64Array(K)
-  for (let k = 0; k < graph.from.length; k++) {
-    const i = graph.from[k]!
-    const j = graph.to[k]!
-    for (let c = 0; c < K; c++)
-      slack[c] = dual[i * K + c]! + dual[j * K + c]! - 2 * graph.weight[k * K + c]!
-    addSharedBlossoms(slack, i, j, solution, K)
-    const sign = signOf(slack, 0)
-    if (sign < 0) return `edge ${k} (${i}, ${j}) could be improved on`
-    if (mate[i]! >> 1 === k && mate[j]! >> 1 === k && sign !== 0)
-      return `matched edge ${k} is not tight`
-  }
-
-  for (let b = N; b < 2 * N; b++) {
-    if (blossombase[b]! >= 0 && signOf(dual, b * K) > 0) {
-      const endps = blossomendps[b]!
-      if (endps.length % 2 !== 1) return `blossom ${b} is an even cycle`
-      for (let q = 1; q < endps.length; q += 2) {
-        const p = endps[q]!
-        if (mate[endpoint[p]!] !== (p ^ 1) || mate[endpoint[p ^ 1]!] !== p)
-          return `blossom ${b} is not full`
-      }
-    }
-  }
-  return undefined
-}
-
-/** Adds, to a slack row, twice the dual of every blossom that holds both vertices. */
-export function addSharedBlossoms(
-  slack: Float64Array,
-  i: number,
-  j: number,
-  solution: MatchingSolution,
-  levels: number,
-): void {
-  const { blossomparent, dual } = solution
-  const above: number[] = []
-  const alsoAbove: number[] = []
-  for (let t = blossomparent[i]!; t !== -1; t = blossomparent[t]!) above.push(t)
-  for (let t = blossomparent[j]!; t !== -1; t = blossomparent[t]!) alsoAbove.push(t)
-  while (above.length > 0 && alsoAbove.length > 0 && above.at(-1) === alsoAbove.at(-1)) {
-    const b = above.pop()!
-    alsoAbove.pop()
-    for (let c = 0; c < levels; c++) slack[c]! += 2 * dual[b * levels + c]!
-  }
 }

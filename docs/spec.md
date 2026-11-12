@@ -268,18 +268,22 @@ Development tooling may have dependencies. The shipped packages have no third-pa
 
 Every round was proven best. `pnpm bench <entrants> <rounds> --check` repeats it and fails if a round is unproven or over target.
 
-Other Configurations, one round each, same machine. All were proven best; some are slow:
+Other Configurations, one round each, same machine. All were proven best:
 
-| Configuration | 2,001 Entrants | 6,001 Entrants |
-|---|---|---|
-| Starting | 0.1 s | 0.5 s |
-| Avoid same club, then starting | 0.2 s | 0.5 s |
-| Starting with a Pair-down choice by Rank | 0.2 s | 1.2 s |
-| No rematch, then pair adjacent by Rank | 0.6 s | 2.8 s |
-| Prefer same pod (pods of 8), then starting | 3.1 s | 43 s |
-| Pair top vs bottom by Rank | 8.3 s | over 60 s |
+| Configuration | 2,001 Entrants | 6,001 | 20,001 |
+|---|---|---|---|
+| Starting | 0.1 s | 0.2 s | 0.4 s |
+| Avoid same club, then starting | 0.1 s | 0.2 s | 0.4 s |
+| A last round: no rematch, Bye cap, Bye to lowest Rank, pair adjacent by Rank | under 0.1 s | 0.1 s | 0.2 s |
+| Starting with a Pair-down choice by Rank | 0.1 s | 0.9 s | 1.0 s |
+| Prefer same pod (pods of 8), then starting | 0.1 s | 0.2 s | 1.5 s |
+| Pair top vs bottom by Rank | under 0.1 s | under 0.1 s | 0.1 s |
+| Bye to lowest Rank, then top vs bottom | 0.1 s | 0.9 s | 0.8 s |
+| Pair adjacent by Rank, odd count, nothing said about the Bye | 0.1 s | 0.6 s | 10 s |
 
-The last three are slow for the same reason. The matcher is first offered opponents who are close in Score and Shuffle Position, and the proof step rules Pairings out by the same two things. A Constraint that wants something else, such as a pod-mate or the mirror Rank, gets poor first offers and a proof step that falls back towards looking at every pair. The answers are still exact; only the time suffers. Offering opponents and ruling them out by Group Label and by Rank is the fix, and is not built.
+The matcher is first offered opponents by what the levels reward: near in Score and Shuffle Position, near along any level that measures a distance such as Rank, and sharing any Group Label that is rewarded. The proof step rules Pairings out the same ways.
+
+The last row is the one slow case left. With an odd count and no Bye rule, every second Entrant is an equally good choice for the Bye as far as Rank goes, and each choice shifts every Pairing below it. Shuffle Positions decide between about ten thousand candidates that each differ in thousands of Pairings. A real Configuration states a Bye rule, which removes the choice.
 
 Not yet shown:
 

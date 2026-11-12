@@ -1,6 +1,8 @@
 import type { Level } from '../cost.ts'
 import type { Field } from '../field.ts'
-import { addSharedBlossoms, type MatchingSolution } from './blossom.ts'
+import type { MatchingSolution } from './blossom.ts'
+import { layOutBlossoms } from './forest.ts'
+import { addSharedBlossoms } from './verify.ts'
 
 /**
  * Checks every possible Pairing against the matcher's proof and returns those that could improve
@@ -64,11 +66,13 @@ function signOf(row: Float64Array, width: number): number {
 type Bucket = {
   /** The blossom this bucket's Entrants hang under, or -1. */
   anchor: number
-  /** Dual on every level but the last, the same for every Entrant in the bucket. */
+  /** Dual on every level above the window level, the same for every Entrant in the bucket. */
   upper: number[]
-  /** The least dual on the last level among the Entrants. */
-  leastLast: number
-  /** Entrants in rising Shuffle Position. */
+  /** For each level above the window level that goes by Group Label, the label they share. */
+  labels: (string | undefined)[]
+  /** The least dual on the window level among the Entrants. */
+  least: number
+  /** Entrants in rising order of the window level's `to` value. */
   members: number[]
 }
 
@@ -77,15 +81,17 @@ type Bucket = {
  *
  * A Pairing can only improve the result if its slack is negative. Slack is checked level by
  * level, and every level's cost is zero or more, so assuming a cost of zero can only make a
- * Pairing look better than it is. That gives a safe first test that needs no costs at all
- * except two kinds that are cheap to know exactly:
+ * Pairing look better than it is. That gives a safe first test that needs no costs at all,
+ * except three kinds that are cheap to know exactly:
  *
  *   - levels that depend on the two Scores alone, which are the same for a whole pair of Score Groups;
- *   - the last level, Shuffle Positions, where the cost grows with the distance between positions.
+ *   - levels that go by Group Label, which are the same for everyone who shares a label;
+ *   - the window level: the first level that measures a distance along a line, such as Rank or
+ *     Shuffle Position, where the cost grows with how far apart two Entrants are.
  *
- * Entrants are put in buckets that share a Score and the same duals on every level but the
- * last. Against a whole bucket, the first test either clears everyone, or leaves only Entrants
- * within a window of Shuffle Positions. Whatever survives gets the exact check.
+ * Entrants are put in buckets that share a Score, their labels, and the same duals on every level
+ * above the window level. Against a whole bucket, the first test either clears everyone, or
+ * leaves only Entrants within a window along the line. Whatever survives gets the exact check.
  */
 export function findImprovers(
   field: Field,
@@ -96,95 +102,38 @@ export function findImprovers(
 ): number[] {
   const n = field.size
   const K = levels.length
-  const last = K - 1
-  const { dual, inblossom, blossomparent, blossomchilds, blossombase } = solution
+  const { dual, inblossom } = solution
   const total = 2 * N
 
-  // ----- The blossom forest, laid out so the lowest shared blossom of two nodes is a lookup. -----
-  // anchor[x]: the lowest blossom above x whose dual is non-zero on some level but the last, or
-  // failing that the outermost blossom. Blossoms below an anchor only carry last-level duals,
-  // which are zero or more.
-  const first = new Int32Array(total).fill(-1)
-  const sumFromTop = new Float64Array(total * K) // blossom duals added from the outermost down
-  const anchor = new Int32Array(total).fill(-1)
-  const topOf = new Int32Array(total).fill(-1)
-  const tour: number[] = []
-  const depth: number[] = []
-  const carriesUpper = (b: number): boolean => {
-    for (let c = 0; c < last; c++) if (dual[b * K + c] !== 0) return true
-    return false
-  }
-  for (let top = N; top < total; top++) {
-    if (blossombase[top]! < 0 || blossomparent[top] !== -1) continue
-    for (let c = 0; c < K; c++) sumFromTop[top * K + c] = dual[top * K + c]!
-    anchor[top] = top
-    topOf[top] = top
-    const nodes = [top]
-    const next = [0]
-    first[top] = tour.length
-    tour.push(top)
-    depth.push(0)
-    while (nodes.length > 0) {
-      const at = nodes.length - 1
-      const x = nodes[at]!
-      const childs = blossomchilds[x]!
-      const i = next[at]!
-      if (i === childs.length) {
-        nodes.pop()
-        next.pop()
-        if (nodes.length > 0) {
-          tour.push(nodes.at(-1)!)
-          depth.push(nodes.length - 1)
-        }
-        continue
-      }
-      next[at] = i + 1
-      const y = childs[i]!
-      first[y] = tour.length
-      tour.push(y)
-      depth.push(nodes.length)
-      topOf[y] = top
-      if (y >= N) {
-        for (let c = 0; c < K; c++)
-          sumFromTop[y * K + c] = sumFromTop[x * K + c]! + dual[y * K + c]!
-        anchor[y] = carriesUpper(y) ? y : anchor[x]!
-        nodes.push(y)
-        next.push(0)
-      } else {
-        anchor[y] = anchor[x]!
-        tour.push(x)
-        depth.push(nodes.length - 1)
-      }
+  // The window level, and the line it measures along. Shuffle Positions, always last, are one.
+  let window = K - 1
+  for (let c = 0; c < K; c++) {
+    if (levels[c]!.shape?.type === 'line') {
+      window = c
+      break
     }
   }
-  const tourLength = tour.length
-  const shallowest: Int32Array[] = [new Int32Array(tourLength)]
-  for (let i = 0; i < tourLength; i++) shallowest[0]![i] = i
-  for (let j = 1; 1 << j <= tourLength; j++) {
-    const previous = shallowest[j - 1]!
-    const half = 1 << (j - 1)
-    const current = new Int32Array(tourLength - (1 << j) + 1)
-    for (let i = 0; i < current.length; i++) {
-      const x = previous[i]!
-      const y = previous[i + half]!
-      current[i] = depth[x]! <= depth[y]! ? x : y
-    }
-    shallowest.push(current)
+  const line = levels[window]!.shape as { from: readonly number[]; to: readonly number[] }
+  const from = line.from
+  const to = line.to
+  // On the last level a slack of exactly zero is not an improvement. Above it, lower levels decide.
+  const zeroIsSafe = window === K - 1
+
+  // Which levels above the window reward a shared label, and where each keeps its label in a
+  // bucket. Their cost is 1 for most Pairings, so it has to be known exactly. A level that only
+  // penalises a shared label costs 0 for most Pairings, so assuming 0 is nearly always right,
+  // and splitting buckets by its labels would cost far more than it saves.
+  const labelLevels: number[] = []
+  for (let c = 0; c < window; c++) {
+    const shape = levels[c]!.shape
+    if (shape?.type === 'labels' && shape.scoring === 'different') labelLevels.push(c)
   }
-  /** The lowest blossom that holds both nodes. Both must be under the same outermost blossom. */
-  const lowestShared = (x: number, y: number): number => {
-    let left = first[x]!
-    let right = first[y]!
-    if (left > right) {
-      const swap = left
-      left = right
-      right = swap
-    }
-    const j = 31 - Math.clz32(right - left + 1)
-    const p = shallowest[j]![left]!
-    const q = shallowest[j]![right - (1 << j) + 1]!
-    return tour[depth[p]! <= depth[q]! ? p : q]!
-  }
+  const labelOf = labelLevels.map(
+    (c) => (levels[c]!.shape as { label: readonly (string | undefined)[] }).label,
+  )
+
+  // The blossoms, laid out so the lowest shared blossom of two nodes is a lookup.
+  const { anchor, topOf, sumFromTop, lowestShared } = layOutBlossoms(solution, N, K, window)
 
   const slack = new Float64Array(K)
   const improves = (a: number, b: number): boolean => {
@@ -197,7 +146,7 @@ export function findImprovers(
     return signOf(slack, K) < 0
   }
 
-  // ----- Score Groups, highest first, each in rising Shuffle Position. -----
+  // ----- Score Groups, highest first. -----
   const order = Array.from({ length: n }, (_, a) => a).sort(
     (a, b) => field.score[b]! - field.score[a]! || a - b,
   )
@@ -208,27 +157,31 @@ export function findImprovers(
     else groups.push([a])
   }
 
-  // ----- Buckets within each Score Group. -----
+  // ----- Buckets within each Score Group, each in rising order along the line. -----
   const buckets: Bucket[][] = groups.map((group) => {
     const byKey = new Map<string, Bucket>()
     for (const a of group) {
       const o = a * K
       let key = String(anchor[a])
-      for (let c = 0; c < last; c++) key += `,${dual[o + c]}`
+      for (let c = 0; c < window; c++) key += `,${dual[o + c]}`
+      for (const labels of labelOf) key += `\u0000${labels[a] ?? '\u0001'}`
       let bucket = byKey.get(key)
       if (bucket === undefined) {
         bucket = {
           anchor: anchor[a]!,
-          upper: Array.from(dual.subarray(o, o + last)),
-          leastLast: Number.POSITIVE_INFINITY,
+          upper: Array.from(dual.subarray(o, o + window)),
+          labels: labelOf.map((labels) => labels[a]),
+          least: Number.POSITIVE_INFINITY,
           members: [],
         }
         byKey.set(key, bucket)
       }
       bucket.members.push(a)
-      if (dual[o + last]! < bucket.leastLast) bucket.leastLast = dual[o + last]!
+      if (dual[o + window]! < bucket.least) bucket.least = dual[o + window]!
     }
-    return [...byKey.values()]
+    const found = [...byKey.values()]
+    for (const bucket of found) bucket.members.sort((x, y) => to[x]! - to[y]! || x - y)
+    return found
   })
 
   // The blossom duals that certainly apply to anything under two given anchors.
@@ -249,35 +202,42 @@ export function findImprovers(
     improvers.push(a < b ? a * N + b : b * N + a)
     return improvers.length >= atMost
   }
-  const scoreCost = new Float64Array(last)
-  const position = field.position
+  // Twice the cost on each level above the window that is known exactly; zero stands in elsewhere.
+  const knownCost = new Float64Array(window)
+  const slotOf = new Int32Array(window).fill(-1)
+  for (const [slot, c] of labelLevels.entries()) slotOf[c] = slot
 
   for (let g = 0; g < groups.length; g++) {
     const group = groups[g]!
     for (let h = g; h < groups.length; h++) {
-      // Twice the cost, on each level that depends on the two Scores alone. Zero stands in elsewhere.
       const one = group[0]!
       const other = groups[h]![0]!
-      for (let c = 0; c < last; c++)
-        scoreCost[c] = levels[c]!.scoreOnly === true ? 2 * levels[c]!.pair(one, other) : 0
+      for (let c = 0; c < window; c++)
+        knownCost[c] = levels[c]!.shape?.type === 'scores' ? 2 * levels[c]!.pair(one, other) : 0
       const against = buckets[h]!
 
       for (const a of group) {
         const oa = a * K
         const anchorA = anchor[a]!
-        const here = position[a]!
-        const lastA = dual[oa + last]!
+        const here = from[a]!
+        const windowA = dual[oa + window]!
 
         for (const bucket of against) {
           const shared = sharedUnder(anchorA, bucket.anchor)
           const os = shared * K
           let sign = 0
-          for (let c = 0; c < last && sign === 0; c++) {
-            const x =
+          for (let c = 0; c < window && sign === 0; c++) {
+            let x =
               dual[oa + c]! +
               bucket.upper[c]! +
-              scoreCost[c]! +
+              knownCost[c]! +
               (shared === -1 ? 0 : 2 * sumFromTop[os + c]!)
+            const slot = slotOf[c]!
+            if (slot !== -1) {
+              const mine = labelOf[slot]![a]
+              const theirs = bucket.labels[slot]
+              if (mine !== undefined && theirs !== undefined && mine !== theirs) x += 2
+            }
             if (x > 0) sign = 1
             else if (x < 0) sign = -1
           }
@@ -293,41 +253,35 @@ export function findImprovers(
             continue
           }
 
-          // Level on everything but Shuffle Positions: only near neighbours can have negative slack.
-          const sharedLast = shared === -1 ? 0 : 2 * sumFromTop[os + last]!
-          const room = -(lastA + bucket.leastLast + sharedLast)
-          if (room <= 0) continue
+          // Level on everything above the window: only near neighbours along the line can have negative slack.
+          const sharedWindow = shared === -1 ? 0 : 2 * sumFromTop[os + window]!
+          const room = -(windowA + bucket.least + sharedWindow)
+          if (zeroIsSafe ? room <= 0 : room < 0) continue
           let low = 0
           let high = members.length
           while (low < high) {
             const middle = (low + high) >> 1
-            if (position[members[middle]!]! < here) low = middle + 1
+            if (to[members[middle]!]! < here) low = middle + 1
             else high = middle
           }
           for (let i = low; i < members.length; i++) {
             const b = members[i]!
-            const distance = position[b]! - here
+            const distance = to[b]! - here
             const cost = 2 * distance * distance
-            if (cost >= room) break
+            if (zeroIsSafe ? cost >= room : cost > room) break
             if (h === g && b <= a) continue
-            if (
-              cost + lastA + dual[b * K + last]! + sharedLast < 0 &&
-              improves(a, b) &&
-              found(a, b)
-            )
+            const least = cost + windowA + dual[b * K + window]! + sharedWindow
+            if ((zeroIsSafe ? least < 0 : least <= 0) && improves(a, b) && found(a, b))
               return improvers
           }
           for (let i = low - 1; i >= 0; i--) {
             const b = members[i]!
-            const distance = here - position[b]!
+            const distance = here - to[b]!
             const cost = 2 * distance * distance
-            if (cost >= room) break
+            if (zeroIsSafe ? cost >= room : cost > room) break
             if (h === g && b <= a) continue
-            if (
-              cost + lastA + dual[b * K + last]! + sharedLast < 0 &&
-              improves(a, b) &&
-              found(a, b)
-            )
+            const least = cost + windowA + dual[b * K + window]! + sharedWindow
+            if ((zeroIsSafe ? least < 0 : least <= 0) && improves(a, b) && found(a, b))
               return improvers
           }
         }

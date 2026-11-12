@@ -292,6 +292,38 @@ describe('the same rules on larger fields, which go through the fast matcher', (
   })
 })
 
+describe('very large fields', () => {
+  // Top against bottom nests thousands of blossoms inside one another, like the layers of an
+  // onion. This once overflowed the call stack, and the result came back unproven.
+  test('top vs bottom with a Bye rule folds a field of 20,001 exactly, and proves it', () => {
+    const size = 20_001
+    const input: RoundInput = {
+      system: 'swiss',
+      entrants: Array.from({ length: size }, (_, at) => ({
+        id: `e${at + 1}`,
+        score: 0,
+        opponents: [],
+        byes: 0,
+        rank: at + 1,
+      })),
+      configuration: [{ type: 'bye-to-lowest-rank' }, { type: 'pair-top-vs-bottom-by-rank' }],
+      randomSeed: 'deep',
+      round: 1,
+    }
+    const result = mustPair(input)
+    expect(result.provenBest).toBe(true)
+    expect(result.bye).toBe(`e${size}`)
+    // Rank k meets Rank 20,001 - k: 1 v 20,000, 2 v 19,999, down to 10,000 v 10,001.
+    const sums = new Set(
+      result.pairings.map(
+        (pairing) => rankOf(input, pairing.entrants[0]) + rankOf(input, pairing.entrants[1]),
+      ),
+    )
+    expect(sums).toEqual(new Set([size]))
+    expect(result.pairings).toHaveLength((size - 1) / 2)
+  }, 60_000)
+})
+
 describe('what each measured Constraint achieves when it comes first', () => {
   const alone = (constraint: Constraint, options = {}): fc.Arbitrary<RoundInput> =>
     round({ configuration: [constraint], ...options })

@@ -1,13 +1,9 @@
 import type { Level } from '../cost.ts'
 import type { Mates } from '../exhaustive.ts'
 import type { Field } from '../field.ts'
-import {
-  solveMatching,
-  verifyMatching,
-  type MatchingGraph,
-  type MatchingSolution,
-} from './blossom.ts'
+import { solveMatching, type MatchingGraph, type MatchingSolution } from './blossom.ts'
 import { findImprovers, findImproversSlowly } from './improvers.ts'
+import { verifyMatching } from './verify.ts'
 
 export type MatchOptions = {
   /** Give up, returning undefined, after this much work. */
@@ -24,8 +20,6 @@ export type MatchOptions = {
 const NEIGHBOURS = 6
 /** Nearest Entrants, by Shuffle Position, offered from each of the next Score Groups down. */
 const NEIGHBOURS_BELOW = 3
-/** Neighbours in Rank order offered when every Entrant has a Rank. */
-const NEIGHBOURS_BY_RANK = 2
 const COMPLETE_UP_TO = 64
 /** The largest field that falls back to every possible Pairing when the sparse graph fails. */
 const COMPLETE_AT_MOST = 3000
@@ -70,7 +64,7 @@ export function solveByMatching(
   let complete = n <= (options.completeUpTo ?? COMPLETE_UP_TO)
   let widened = 0
   if (complete) offerEverything()
-  else offerLikely(field, offer, 1, options.neighbours ?? NEIGHBOURS)
+  else offerLikely(field, levels, offer, 1, options.neighbours ?? NEIGHBOURS)
   if (odd) for (let a = 0; a < n; a++) edges.add(a * N + BYE)
 
   for (let round = 0; round < MOST_ROUNDS; round++) {
@@ -83,7 +77,7 @@ export function solveByMatching(
       // The sparse graph was too thin to pair everyone. Offer more, then everything.
       if (complete) return undefined
       widened++
-      if (widened === 1) offerLikely(field, offer, 2, options.neighbours ?? NEIGHBOURS)
+      if (widened === 1) offerLikely(field, levels, offer, 2, options.neighbours ?? NEIGHBOURS)
       else if (n <= COMPLETE_AT_MOST) {
         offerEverything()
         complete = true
@@ -139,11 +133,18 @@ function graphOf(
 }
 
 /**
- * Offers each Entrant a handful of likely opponents: the next few by Shuffle Position on the
- * same Score, the nearest few on each of the next Scores down, and neighbours in Rank order.
+ * Offers each Entrant a handful of likely opponents, guided by what the levels reward:
+ *
+ *   - the next few by Shuffle Position on the same Score, and the nearest few on each of the
+ *     next Scores down;
+ *   - for a level that measures a distance, such as pairing by Rank, the nearest few along it;
+ *   - for a level that rewards a shared Group Label, such as pods, a few who share it.
+ *
+ * Offers only affect speed. Whatever is left out is checked afterwards.
  */
 function offerLikely(
   field: Field,
+  levels: readonly Level[],
   offer: (a: number, b: number) => void,
   generosity: number,
   neighbours: number,
@@ -194,13 +195,47 @@ function offerLikely(
     }
   }
 
-  if (field.everyoneRanked) {
-    const byRank = Array.from({ length: n }, (_, a) => a).sort(
-      (a, b) => field.rank[a]! - field.rank[b]! || a - b,
-    )
-    for (let at = 0; at < n; at++) {
-      for (let next = at + 1; next < n && next <= at + NEIGHBOURS_BY_RANK * generosity; next++)
-        offer(byRank[at]!, byRank[next]!)
+  // Every level but the last: Shuffle Positions are already covered above.
+  for (const level of levels.slice(0, -1)) {
+    const shape = level.shape
+    if (shape?.type === 'line') {
+      // The nearest few along the line, on both sides.
+      const { from, to } = shape
+      const byTo = Array.from({ length: n }, (_, a) => a).sort((a, b) => to[a]! - to[b]! || a - b)
+      for (let a = 0; a < n; a++) {
+        const here = from[a]!
+        let low = 0
+        let high = n
+        while (low < high) {
+          const middle = (low + high) >> 1
+          if (to[byTo[middle]!]! < here) low = middle + 1
+          else high = middle
+        }
+        let up = low
+        let down = low - 1
+        for (let count = 0; count < same && (down >= 0 || up < n); count++) {
+          if (down < 0) offer(a, byTo[up++]!)
+          else if (up >= n) offer(a, byTo[down--]!)
+          else if (here - to[byTo[down]!]! <= to[byTo[up]!]! - here) offer(a, byTo[down--]!)
+          else offer(a, byTo[up++]!)
+        }
+      }
+    } else if (shape?.type === 'labels' && shape.scoring === 'different') {
+      // Sharing a label is rewarded: offer the next few who share it, in Shuffle Position order.
+      const sharing = new Map<string, number[]>()
+      for (let a = 0; a < n; a++) {
+        const label = shape.label[a]
+        if (label === undefined) continue
+        const members = sharing.get(label)
+        if (members === undefined) sharing.set(label, [a])
+        else members.push(a)
+      }
+      for (const members of sharing.values()) {
+        for (let at = 0; at < members.length; at++) {
+          for (let next = at + 1; next < members.length && next <= at + same; next++)
+            offer(members[at]!, members[next]!)
+        }
+      }
     }
   }
 }
