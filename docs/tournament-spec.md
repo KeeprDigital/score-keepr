@@ -2,7 +2,7 @@
 
 Turns the record of what happened in a tournament into the tournament as it stands, and makes the next entry in that record. Words are defined in `GLOSSARY.md`. Pairing is in `docs/spec.md`, Standings in `docs/standings-spec.md`.
 
-Designed, not built. Every point here has been agreed, except the items under "Filled in while writing" and "Open questions".
+Designed, not built. Every point here has been agreed.
 
 ## Scope
 
@@ -110,6 +110,12 @@ Rank and Score come from the Standings of the Phases named as counting, as they 
 
 **Single Elimination**: the structure is built when the Phase starts and recorded in the Action. Winners fill later Slots as Results arrive. Entrants need different Ranks; if the line falls between Entrants who share one, starting the Phase is refused, and the organiser adds a Tiebreaker or hand-picks.
 
+A Single Elimination Result has one winner, or both lose. When both lose:
+
+- The Entrant who would have met the winner gets a Bye.
+- If both Pairings feeding a later Pairing end that way, that Pairing has nobody, and the Entrant after it gets a Bye too.
+- In the final, first place is left empty and both are placed second.
+
 **Rounds handed to the Standings Engine** are numbered on from one counted Phase to the next.
 
 ## Sections
@@ -122,7 +128,14 @@ A Section is made one of three ways:
 - by size, at random, using the Random Seed
 - from a label the organiser supplies, which covers divisions
 
-**By size**: Sections are as even as possible and never above the target. 20 Entrants with a target of 8 make 7, 7 and 6. The organiser can move Entrants between Sections before the first round is paired.
+**By size**, the sizes come one of two ways:
+
+- **A range**: the smallest and largest allowed. Sections are as even as possible inside it. When no split fits, the largest is exceeded by as little as possible.
+- **An explicit list**: the organiser states the sizes, such as 8, 6 and 6. This reproduces any publisher's table exactly.
+
+No one formula fits the publishers: Magic asks for pods "of roughly equal size", Lorcana publishes a table that is not even, and One Piece drafts in pods of four. Their tables can be added later as dated data.
+
+The organiser can move Entrants between Sections before the first round is paired.
 
 Standings cover the whole Phase and can be filtered by Section.
 
@@ -169,7 +182,7 @@ A Clash is two Actions about the same thing where neither had seen the other. No
 | An Entrant dropped or removed, and also paired | Both stand, flagged. |
 | A setting changed twice | The last in order applies, flagged. |
 
-**Results against Pairings that no longer stand**, whether set aside by a Clash or replaced by a re-pairing: the Result carries over if the same two Entrants are paired in the set that stands. Otherwise it is kept and flagged.
+**Results against Pairings that no longer stand**, whether set aside by a Clash or replaced by a re-pairing: the Result carries over if the same two Entrants are paired in the set that stands, and is shown as carried over. Otherwise it is kept and flagged.
 
 ## Flags
 
@@ -209,7 +222,7 @@ Only what cannot be recorded at all (ADR 0009). Each comes back as an error valu
 - An Action naming an unknown Entrant, Phase, Section or Pairing.
 - A Result naming an Entrant who was never in that Pairing.
 - A Result the Standings Configuration does not allow.
-- In Single Elimination, a Result without exactly one winner.
+- In Single Elimination, a draw.
 - Starting a Phase whose Entrants cannot be decided, such as a shared Rank at the line.
 - A malformed Action, or one from a newer engine version than this one.
 
@@ -252,7 +265,13 @@ To be enforced by tests when built:
 ## Speed
 
 - Target: a tournament of 20,000 Entrants and 15 rounds worked out from its Log in 1 second, one thread, mid-range laptop. Standings are worked out only when asked for.
-- Nothing is measured yet.
+- That tournament is about 175,000 Actions. Nothing is measured yet.
+- Ceiling: 262,144 Entrants, as for the other engines.
+- If measurement shows a need, a function that adds new Actions to a tournament already worked out can be added. It must give the same answer as working it out from the whole Log.
+
+## What it needs from the other engines
+
+- Final Placings must accept a Single Elimination Pairing with no winner. That is an addition to the Standings Engine.
 
 ## What the Consumer must do
 
@@ -264,22 +283,10 @@ To be enforced by tests when built:
 - Run heavy calls in a worker when a UI must stay responsive.
 - Show Flags, and warn when someone pairs while out of contact.
 
-## Filled in while writing
+## Not yet known
 
-Small points not asked as questions. Each needs a yes:
-
-- A late entry's "Entrant added" Action names the running Phase and Section they join.
-- Changing a table by hand is recording the round again with the same Pairings.
-- When both Entrants in a Pairing have a fixed table, the lower number is used.
-- A Single Elimination Result must have exactly one winner in v1.
-- A Device meeting an Action from a newer version stops and asks for an update.
-
-## Open questions
-
-- How a double loss in Single Elimination should be handled.
-- Whether "as even as possible, never above the target" matches each publisher's rule for pod sizes.
-- Whether carrying a Result over to a standing Pairing of the same two Entrants is always right.
-- How large a Log may grow before the 1 second target is at risk.
+- Speed. Nothing is built, so nothing is measured.
+- Publishers' tables for Section sizes and round counts. They are not yet sourced.
 
 ## Decision records
 

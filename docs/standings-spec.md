@@ -12,6 +12,7 @@ Every point here has been agreed.
   - Flesh and Blood's round-weighted Tiebreaker. Its two official sources give different formulas.
   - Soft scores per Entrant, such as painting or sportsmanship.
   - Point band tables beyond the four points methods below.
+  - Final Placings for a Single Elimination Pairing with no winner, which the Tournament Engine needs (`docs/tournament-spec.md`).
 - **Out of scope**:
   - Extra play-off matches. The Consumer runs them.
   - Team line-ups. A team is one Entrant; the Consumer combines its members' results.
