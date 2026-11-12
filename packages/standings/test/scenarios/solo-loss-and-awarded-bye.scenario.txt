@@ -4,6 +4,6 @@ config: starting
 
 round  result
 1      ann awarded-bye
-1      ben loss
+1      ben unplayed-loss
 1      cal bye
 1      dee beat eve

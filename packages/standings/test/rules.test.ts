@@ -120,7 +120,7 @@ describe('rules that hold for every set of Standings', () => {
           let score = 0
           for (const result of input.results) {
             if ('entrant' in result) {
-              if (result.entrant === row.id && result.kind !== 'loss') score += 3
+              if (result.entrant === row.id && result.kind !== 'unplayed-loss') score += 3
             } else {
               const side = result.entrants.indexOf(row.id)
               if (side >= 0)

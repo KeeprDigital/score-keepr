@@ -15,7 +15,7 @@ const playedRate: RateSettings = {
 const base: StandingsConfiguration = {
   points: { type: 'by-outcome', win: 3, draw: 1, loss: 0 },
   bye: { points: 3, games: [2, 0, 0], countsAsPlayed: true },
-  soloLoss: { points: 0, games: [0, 2, 0], countsAsPlayed: true },
+  unplayedLoss: { points: 0, games: [0, 2, 0], countsAsPlayed: true },
   allow: { draws: true, doubleLosses: true },
   tiebreakers: [],
   byesReceived: 'assigned',

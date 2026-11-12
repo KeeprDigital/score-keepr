@@ -25,7 +25,7 @@ const isWhole = (value: unknown, least: number = Number.MIN_SAFE_INTEGER): value
   typeof value === 'number' && Number.isSafeInteger(value) && value >= least
 const isText = (value: unknown): value is string => typeof value === 'string' && value !== ''
 const OUTCOMES: readonly unknown[] = ['win', 'loss', 'draw']
-const SOLO_KINDS: readonly unknown[] = ['bye', 'awarded-bye', 'loss']
+const SOLO_KINDS: readonly unknown[] = ['bye', 'awarded-bye', 'unplayed-loss']
 
 /** Which Tiebreakers read game scores, and which settings each Tiebreaker takes. */
 const TIEBREAKER_SETTINGS: Record<Tiebreaker['type'], readonly string[]> = {
@@ -218,8 +218,8 @@ function parseMatch(
   fields: FieldsOf,
   wrong: Wrong,
 ): MatchResult | undefined {
-  fields(value, where, ['round', 'entrants', 'outcomes'], ['games', 'scores'])
-  const { round, entrants, outcomes, games, scores } = value
+  fields(value, where, ['round', 'entrants', 'outcomes'], ['games', 'extraScores'])
+  const { round, entrants, outcomes, games, extraScores: scores } = value
   let sound = true
   const bad = (message: string): void => {
     wrong(`${where}: ${message}`)
@@ -256,7 +256,7 @@ function parseMatch(
       )
     )
   ) {
-    bad('`scores` must give two whole numbers for each named score.')
+    bad('`extraScores` must give two whole numbers for each Extra Score.')
   }
   if (!sound) return undefined
   const result: MatchResult = {
@@ -266,7 +266,7 @@ function parseMatch(
   }
   if (games !== undefined) result.games = [...(games as [number, number, number])]
   if (scores !== undefined) {
-    result.scores = Object.fromEntries(
+    result.extraScores = Object.fromEntries(
       Object.entries(scores as Record<string, [number, number]>).map(([name, pair]) => [
         name,
         [pair[0], pair[1]],
@@ -285,7 +285,9 @@ function parseSolo(
   fields(value, where, ['round', 'entrant', 'kind'])
   const { round, entrant, kind } = value
   if (!isWhole(round, 1) || !isText(entrant) || !SOLO_KINDS.includes(kind)) {
-    wrong(`${where} must have a round, one Entrant, and a kind of "bye", "awarded-bye" or "loss".`)
+    wrong(
+      `${where} must have a round, one Entrant, and a kind of "bye", "awarded-bye" or "unplayed-loss".`,
+    )
     return undefined
   }
   return { round, entrant, kind: kind as SoloResult['kind'] }
@@ -309,7 +311,7 @@ function parseConfiguration(
   const value = fields(raw, 'The Configuration', [
     'points',
     'bye',
-    'soloLoss',
+    'unplayedLoss',
     'allow',
     'tiebreakers',
     'byesReceived',
@@ -318,7 +320,7 @@ function parseConfiguration(
 
   const points = parsePoints(value['points'], fields, wrong)
   const bye = parseSoloScoring(value['bye'], '`bye`', fields, wrong)
-  const soloLoss = parseSoloScoring(value['soloLoss'], '`soloLoss`', fields, wrong)
+  const unplayedLoss = parseSoloScoring(value['unplayedLoss'], '`unplayedLoss`', fields, wrong)
   const allow = fields(value['allow'], '`allow`', ['draws', 'doubleLosses'])
   if (
     allow !== undefined &&
@@ -351,7 +353,7 @@ function parseConfiguration(
   return {
     points: points as PointsMethod,
     bye: bye as SoloScoring,
-    soloLoss: soloLoss as SoloScoring,
+    unplayedLoss: unplayedLoss as SoloScoring,
     allow: { draws: allow?.['draws'] as boolean, doubleLosses: allow?.['doubleLosses'] as boolean },
     tiebreakers,
     byesReceived: byesReceived as StandingsConfiguration['byesReceived'],
@@ -687,10 +689,10 @@ function checkAgainstConfiguration(
       )
     }
     for (const name of scoreNames) {
-      if (result.scores?.[name] === undefined) {
+      if (result.extraScores?.[name] === undefined) {
         problem(
           'missing-score',
-          `${where}: the Configuration uses the score "${name}", and this Result does not have it.`,
+          `${where}: the Configuration uses the Extra Score "${name}", and this Result does not have it.`,
           both,
         )
       }

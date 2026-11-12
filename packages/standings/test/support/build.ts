@@ -73,7 +73,7 @@ export class Event {
     ])
   }
 
-  bye(id: string, kind: 'bye' | 'awarded-bye' | 'loss' = 'bye'): this {
+  bye(id: string, kind: 'bye' | 'awarded-bye' | 'unplayed-loss' = 'bye'): this {
     this.results.push({ round: this.next(id), entrant: id, kind })
     return this
   }

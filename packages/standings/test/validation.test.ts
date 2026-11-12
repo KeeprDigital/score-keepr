@@ -91,11 +91,27 @@ describe('computeStandings input checks', () => {
     ],
     ['negative games', (i) => (results(i)[0]!['games'] = [2, -1, 0]), 'invalid-input'],
     [
-      'a named score that is not a pair',
-      (i) => (results(i)[0]!['scores'] = { vp: 50 }),
+      'an Extra Score that is not a pair',
+      (i) => (results(i)[0]!['extraScores'] = { vp: 50 }),
       'invalid-input',
     ],
     ['an unknown field on a Result', (i) => (results(i)[0]!['table'] = 4), 'unknown-field'],
+    // Names used before the vocabulary was settled. None is kept as an alias.
+    [
+      'Extra Scores under their old name',
+      (i) => (results(i)[0]!['scores'] = { vp: [70, 40] }),
+      'unknown-field',
+    ],
+    [
+      'an Unplayed Loss under its old name',
+      (i) => results(i).push({ round: 2, entrant: 'ann', kind: 'loss' }),
+      'invalid-input',
+    ],
+    [
+      'the Unplayed Loss setting under its old name',
+      (i) => (config(i)['soloLoss'] = config(i)['unplayedLoss']),
+      'unknown-field',
+    ],
     [
       'a solo Result of an unknown kind',
       (i) => (results(i)[1]!['kind'] = 'forfeit'),
@@ -135,8 +151,8 @@ describe('computeStandings input checks', () => {
     ['a Configuration with no points method', (i) => delete config(i)['points'], 'missing-setting'],
     ['a Configuration with no Bye setting', (i) => delete config(i)['bye'], 'missing-setting'],
     [
-      'a Configuration with no solo-loss setting',
-      (i) => delete config(i)['soloLoss'],
+      'a Configuration with no Unplayed Loss setting',
+      (i) => delete config(i)['unplayedLoss'],
       'missing-setting',
     ],
     [
@@ -339,10 +355,10 @@ describe('computeStandings input checks', () => {
       },
     ],
     [
-      'game scores and named scores nobody reads',
+      'game scores and Extra Scores nobody reads',
       (i) => {
         results(i)[0]!['games'] = [2, 1, 0]
-        results(i)[0]!['scores'] = { vp: [70, 40] }
+        results(i)[0]!['extraScores'] = { vp: [70, 40] }
       },
     ],
     [
@@ -403,7 +419,7 @@ describe('computeStandings input checks', () => {
               {
                 round: fc.nat({ max: 3 }),
                 entrant: fc.constantFrom('ann', 'zed'),
-                kind: fc.constantFrom('bye', 'loss', 'x'),
+                kind: fc.constantFrom('bye', 'unplayed-loss', 'x'),
               },
               { requiredKeys: [] },
             ),
@@ -416,7 +432,7 @@ describe('computeStandings input checks', () => {
             {
               points: fc.anything(),
               bye: fc.anything(),
-              soloLoss: fc.anything(),
+              unplayedLoss: fc.anything(),
               allow: fc.anything(),
               tiebreakers: fc.array(
                 fc.record(
