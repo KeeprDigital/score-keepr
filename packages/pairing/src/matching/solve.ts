@@ -15,10 +15,11 @@ export type MatchOptions = {
   /** Check left-out Pairings the plain way, one pair at a time. For comparing with the fast way. */
   plainProof?: boolean
   /**
-   * Filled in with how much work the call took: the matcher's steps, and the comparisons the
-   * proof step made. For measuring, never for deciding anything.
+   * Filled in with how much work the call took: the matcher's steps, the comparisons the proof
+   * step made, and how many Pairings the matcher had been offered by the end. For measuring,
+   * never for deciding anything.
    */
-  usage?: { steps: number; proofChecks?: number }
+  usage?: { steps: number; proofChecks?: number; offered?: number }
 }
 
 /** Same-Score neighbours, by Shuffle Position, that each Entrant is offered. */
@@ -118,6 +119,7 @@ export function solveByMatching(
     if (options.usage !== undefined) {
       options.usage.steps = steps
       options.usage.proofChecks = proofWork.checks
+      options.usage.offered = edges.size
     }
     if (steps > maxSteps) return undefined
     if (improvers.length === 0) return matesOf(solution, n, BYE)
@@ -162,7 +164,8 @@ function graphOf(
  *   - the next few by Shuffle Position on the same Score, and the nearest few on each of the
  *     next Scores down;
  *   - for a level that measures a distance, such as pairing by Rank, the nearest few along it;
- *   - for a level that rewards a shared Group Label, such as pods, a few who share it.
+ *   - for a level that rewards a shared Group Label, such as pods, a few who share it; and
+ *     when many share it, the same by Score among them as for the whole field.
  *
  * Offers only affect speed. Whatever is left out is checked afterwards.
  */
@@ -174,50 +177,57 @@ function offerLikely(
   neighbours: number,
 ): void {
   const n = field.size
-  // Entrants are numbered in Shuffle Position order, so sorting by Score keeps that order within a Score.
-  const order = Array.from({ length: n }, (_, a) => a).sort(
-    (a, b) => field.score[b]! - field.score[a]! || a - b,
-  )
-  const starts = [0]
-  for (let at = 1; at < n; at++)
-    if (field.score[order[at]!] !== field.score[order[at - 1]!]) starts.push(at)
-  starts.push(n)
-  const groups = starts.length - 1
   const same = neighbours * generosity
   const below = Math.min(neighbours, NEIGHBOURS_BELOW) * generosity
 
-  for (let g = 0; g < groups; g++) {
-    const start = starts[g]!
-    const end = starts[g + 1]!
-    for (let at = start; at < end; at++) {
-      const a = order[at]!
-      for (let next = at + 1; next < end && next <= at + same; next++) offer(a, order[next]!)
-      for (let h = g + 1; h < groups && h <= g + generosity; h++) {
-        const from = starts[h]!
-        const to = starts[h + 1]!
-        // Entrant numbers rise with Shuffle Position, so the nearest positions are the nearest numbers.
-        let low = from
-        let high = to
-        while (low < high) {
-          const middle = (low + high) >> 1
-          if (order[middle]! < a) low = middle + 1
-          else high = middle
-        }
-        let up = low
-        let down = low - 1
-        for (let count = 0; count < below && (down >= from || up < to); count++) {
-          if (down < from) offer(a, order[up++]!)
-          else if (up >= to) offer(a, order[down--]!)
-          else if (
-            field.position[a]! - field.position[order[down]!]! <=
-            field.position[order[up]!]! - field.position[a]!
-          ) {
-            offer(a, order[down--]!)
-          } else offer(a, order[up++]!)
+  /**
+   * Among the given Entrants: the next few by Shuffle Position on the same Score, and the
+   * nearest few on each of the next Scores down.
+   */
+  const offerByScore = (among: readonly number[]): void => {
+    // Entrants are numbered in Shuffle Position order, so sorting by Score keeps that order within a Score.
+    const order = [...among].sort((a, b) => field.score[b]! - field.score[a]! || a - b)
+    const size = order.length
+    const starts = [0]
+    for (let at = 1; at < size; at++)
+      if (field.score[order[at]!] !== field.score[order[at - 1]!]) starts.push(at)
+    starts.push(size)
+    const groups = starts.length - 1
+
+    for (let g = 0; g < groups; g++) {
+      const start = starts[g]!
+      const end = starts[g + 1]!
+      for (let at = start; at < end; at++) {
+        const a = order[at]!
+        for (let next = at + 1; next < end && next <= at + same; next++) offer(a, order[next]!)
+        for (let h = g + 1; h < groups && h <= g + generosity; h++) {
+          const from = starts[h]!
+          const to = starts[h + 1]!
+          // Entrant numbers rise with Shuffle Position, so the nearest positions are the nearest numbers.
+          let low = from
+          let high = to
+          while (low < high) {
+            const middle = (low + high) >> 1
+            if (order[middle]! < a) low = middle + 1
+            else high = middle
+          }
+          let up = low
+          let down = low - 1
+          for (let count = 0; count < below && (down >= from || up < to); count++) {
+            if (down < from) offer(a, order[up++]!)
+            else if (up >= to) offer(a, order[down--]!)
+            else if (
+              field.position[a]! - field.position[order[down]!]! <=
+              field.position[order[up]!]! - field.position[a]!
+            ) {
+              offer(a, order[down--]!)
+            } else offer(a, order[up++]!)
+          }
         }
       }
     }
   }
+  offerByScore(Array.from({ length: n }, (_, a) => a))
 
   // Every level but the last: Shuffle Positions are already covered above.
   for (const level of levels.slice(0, -1)) {
@@ -259,6 +269,9 @@ function offerLikely(
           for (let next = at + 1; next < members.length && next <= at + same; next++)
             offer(members[at]!, members[next]!)
         }
+        // When more share a label than that reaches, the ones wanted are those close in Score
+        // as well: offer by Score among them, as for the whole field.
+        if (members.length > same + 1) offerByScore(members)
       }
     }
   }
