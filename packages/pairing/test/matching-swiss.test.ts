@@ -5,7 +5,7 @@ import { levelsOf, type Level } from '../src/cost.ts'
 import { solveExhaustive, type Mates } from '../src/exhaustive.ts'
 import { buildField } from '../src/field.ts'
 import { solveByMatching, workCeiling } from '../src/matching/solve.ts'
-import type { RoundInput } from '../src/index.ts'
+import { startingConfiguration, type Constraint, type RoundInput } from '../src/index.ts'
 import { round } from './support/arbitraries.ts'
 
 /** What a set of Pairings scores on every level, added exactly. */
@@ -23,6 +23,35 @@ function costOf(levels: readonly Level[], mates: Mates): bigint[] {
 function prepare(input: RoundInput): { size: number; levels: Level[] } {
   const field = buildField(input)
   return { size: field.size, levels: levelsOf(input.configuration, field) }
+}
+
+/**
+ * A large field as it stands after five rounds: five coin flips each, fixed by the Entrant's
+ * number, so Scores run from 0 to 15 with most in the middle. Nobody has met.
+ */
+function afterFiveRounds(
+  size: number,
+  configuration: Constraint[],
+  groups: (at: number) => Record<string, string>,
+): RoundInput {
+  const scoreOf = (at: number): number => {
+    let wins = 0
+    for (let bits = Math.imul(at + 1, 0x9e3779b1) >>> 27; bits > 0; bits >>>= 1) wins += bits & 1
+    return 3 * wins
+  }
+  return {
+    system: 'swiss',
+    entrants: Array.from({ length: size }, (_, at) => ({
+      id: `e${at}`,
+      score: scoreOf(at),
+      opponents: [],
+      byes: 0,
+      groups: groups(at),
+    })),
+    configuration,
+    randomSeed: 'proof',
+    round: 6,
+  }
 }
 
 describe('the fast matcher against the slow exact solver', () => {
@@ -141,6 +170,75 @@ describe('the fast matcher against the slow exact solver', () => {
       }),
       { numRuns: 300 },
     )
+  })
+
+  test('pairing by Rank with an odd count and no Bye rule stays a small fraction of the ceiling', () => {
+    // Every second Entrant is an equally good Bye as far as Rank goes, so Shuffle Positions pick
+    // between thousands of candidates. The proof nests blossoms thousands deep, and the work
+    // must not grow with the square of that depth.
+    const size = 4001
+    const input: RoundInput = {
+      system: 'swiss',
+      entrants: Array.from({ length: size }, (_, at) => ({
+        id: `e${at}`,
+        score: 0,
+        opponents: [],
+        byes: 0,
+        rank: at + 1,
+      })),
+      configuration: [{ type: 'pair-adjacent-by-rank' }],
+      randomSeed: 'deep',
+      round: 1,
+    }
+    const field = buildField(input)
+    const usage = { steps: 0 }
+    expect(solveByMatching(field, levelsOf(input.configuration, field), { usage })).toBeDefined()
+    expect(usage.steps).toBeLessThan(workCeiling(size) / 100)
+  })
+
+  // The proof step sorts Entrants into buckets and compares each Entrant with every bucket, so
+  // the number of buckets must stay small. Each case below once had a bucket for every pod, or
+  // every small blossom, or would have without the rule it names. Each takes under 40
+  // comparisons per Entrant now, and over 350 with its rule broken.
+  test.each<[string, Constraint[], (at: number) => Record<string, string>]>([
+    [
+      'pods of 8, sharing one preferred: small labels and small blossoms share buckets',
+      [{ type: 'prefer-same-group-label', kind: 'pod' }, ...startingConfiguration],
+      (at) => ({ pod: `p${Math.floor(at / 8)}` }),
+    ],
+    [
+      '4 regions, sharing one preferred: a large label keeps a bucket of its own',
+      [{ type: 'prefer-same-group-label', kind: 'region' }, ...startingConfiguration],
+      (at) => ({ region: `r${at % 4}` }),
+    ],
+    [
+      'the starting Configuration: a large blossom keeps buckets of its own',
+      startingConfiguration,
+      () => ({}),
+    ],
+  ])('the proof step makes few comparisons per Entrant, %s', (_, configuration, groups) => {
+    const size = 4001
+    const field = buildField(afterFiveRounds(size, configuration, groups))
+    const usage = { steps: 0, proofChecks: 0 }
+    expect(solveByMatching(field, levelsOf(configuration, field), { usage })).toBeDefined()
+    expect(usage.proofChecks).toBeLessThan(120 * size)
+  })
+
+  test('preferring a label a quarter of the field shares, the matcher is offered what it needs at the start', () => {
+    // The best opponent shares the region and the Score. When those Pairings are not among the
+    // first offered, the proof step adds them by the hundred thousand, and the whole field is
+    // solved again after every batch.
+    const size = 4001
+    const configuration: Constraint[] = [
+      { type: 'prefer-same-group-label', kind: 'region' },
+      ...startingConfiguration,
+    ]
+    const field = buildField(
+      afterFiveRounds(size, configuration, (at) => ({ region: `r${at % 4}` })),
+    )
+    const usage = { steps: 0, offered: 0 }
+    expect(solveByMatching(field, levelsOf(configuration, field), { usage })).toBeDefined()
+    expect(usage.offered).toBeLessThan(40 * size)
   })
 
   test('with no limit given, the built-in ceiling applies', () => {
