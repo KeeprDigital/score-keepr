@@ -14,6 +14,7 @@ export type {
   RoundSuccess,
   Violation,
 } from './pairing-types.ts'
+export { pairingEntrantsFrom, topCutFrom, type PairingEntrantsOptions } from './mappers.ts'
 export { compareCodeUnits, distinctPositions, seededUint32 } from './seeded.ts'
 export type {
   FinalPlacing,
