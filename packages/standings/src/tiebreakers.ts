@@ -126,11 +126,11 @@ export function measuresFor(
           ),
           lowerIsBetter: false,
         }
-      case 'score-total':
+      case 'extra-score-total':
         return {
           measure: whole((tally) => {
-            const scored = tally.scoredFor.get(tiebreaker.score) ?? 0
-            const conceded = tally.scoredAgainst.get(tiebreaker.score) ?? 0
+            const scored = tally.scoredFor.get(tiebreaker.extraScore) ?? 0
+            const conceded = tally.scoredAgainst.get(tiebreaker.extraScore) ?? 0
             return tiebreaker.of === 'for'
               ? scored
               : tiebreaker.of === 'against'

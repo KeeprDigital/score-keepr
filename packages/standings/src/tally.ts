@@ -53,8 +53,8 @@ export function pointsFor(points: PointsMethod, result: MatchResult, side: 0 | 1
       )
       return (row as { points: number }).points
     }
-    case 'by-score-difference': {
-      const scores = result.scores?.[points.score] as [number, number]
+    case 'by-extra-score-difference': {
+      const scores = result.extraScores?.[points.extraScore] as [number, number]
       const difference = Math.abs(scores[0] - scores[1])
       const band = points.bands.find((each) => each.upTo === null || difference <= each.upTo) as {
         higher: number
@@ -62,8 +62,8 @@ export function pointsFor(points: PointsMethod, result: MatchResult, side: 0 | 1
       }
       return scores[side] >= scores[other] ? band.higher : band.lower
     }
-    case 'by-score': {
-      const scores = result.scores?.[points.score] as [number, number]
+    case 'by-extra-score': {
+      const scores = result.extraScores?.[points.extraScore] as [number, number]
       return scores[side]
     }
   }
@@ -110,8 +110,8 @@ export function tallyResults(input: StandingsInput): Map<string, Tally> {
   for (const result of results) {
     if ('entrant' in result) {
       const tally = tallies.get(result.entrant) as Tally
-      const isBye = result.kind !== 'loss'
-      const scoring = isBye ? configuration.bye : configuration.soloLoss
+      const isBye = result.kind !== 'unplayed-loss'
+      const scoring = isBye ? configuration.bye : configuration.unplayedLoss
       tally.score += scoring.points
       if (isBye) {
         tally.wins++
@@ -158,7 +158,7 @@ export function tallyResults(input: StandingsInput): Map<string, Tally> {
         tally.games[2] += result.games[2]
         tally.matchGamesWon += result.games[side]
       }
-      for (const [name, pair] of Object.entries(result.scores ?? {})) {
+      for (const [name, pair] of Object.entries(result.extraScores ?? {})) {
         tally.scoredFor.set(name, (tally.scoredFor.get(name) ?? 0) + pair[side])
         tally.scoredAgainst.set(name, (tally.scoredAgainst.get(name) ?? 0) + pair[other])
       }

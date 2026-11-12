@@ -71,7 +71,7 @@ export function event(options: EventOptions = {}): fc.Arbitrary<StandingsInput> 
                   : how === 'draw'
                     ? ['draw', 'draw']
                     : ['loss', 'loss']
-            return { round, entrants: [first, second], outcomes, games, scores: { vp } }
+            return { round, entrants: [first, second], outcomes, games, extraScores: { vp } }
           })
 
       const round = (number: number): fc.Arbitrary<Result[]> =>
@@ -83,7 +83,11 @@ export function event(options: EventOptions = {}): fc.Arbitrary<StandingsInput> 
             const alone = present.at(-1) as string
             results.push(
               fc
-                .constantFrom<'bye' | 'awarded-bye' | 'loss'>('bye', 'awarded-bye', 'loss')
+                .constantFrom<'bye' | 'awarded-bye' | 'unplayed-loss'>(
+                  'bye',
+                  'awarded-bye',
+                  'unplayed-loss',
+                )
                 .map((kind) => ({ round: number, entrant: alone, kind })),
             )
           }
@@ -145,9 +149,12 @@ export function reordered(input: StandingsInput): fc.Arbitrary<StandingsInput> {
         }
         if (result.games !== undefined)
           flipped.games = [result.games[1], result.games[0], result.games[2]]
-        if (result.scores !== undefined) {
-          flipped.scores = Object.fromEntries(
-            Object.entries(result.scores).map(([name, [mine, theirs]]) => [name, [theirs, mine]]),
+        if (result.extraScores !== undefined) {
+          flipped.extraScores = Object.fromEntries(
+            Object.entries(result.extraScores).map(([name, [mine, theirs]]) => [
+              name,
+              [theirs, mine],
+            ]),
           )
         }
         return flipped

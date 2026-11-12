@@ -12,9 +12,10 @@ Every point here has been agreed.
   - Flesh and Blood's round-weighted Tiebreaker. Its two official sources give different formulas.
   - Soft scores per Entrant, such as painting or sportsmanship.
   - Point band tables beyond the four points methods below.
+  - Final Placings for a Single Elimination Pairing with no winner, which the Tournament Engine needs (`docs/tournament-spec.md`).
 - **Out of scope**:
   - Extra play-off matches. The Consumer runs them.
-  - Team line-ups. A team is one Entrant; the Consumer combines its members' results.
+  - Team line-ups. A Team is one Entrant; the Consumer combines its Players' results.
   - Storage. Designed with the larger product.
 
 ## Package
@@ -41,8 +42,8 @@ Every point here has been agreed.
 
 | Kind | Holds |
 |---|---|
-| Two Entrants | The round. An Outcome for each side: win, loss or draw. Both may lose. Optionally the games won by each and games drawn. Optionally named extra scores per side, such as victory points. |
-| One Entrant | The round, and what it is: a Bye assigned by pairing, a Bye awarded by the organiser, or a loss with no opponent (late entry, penalty). |
+| Two Entrants | The round. An Outcome for each side: win, loss or draw. Both may lose. Optionally the games won by each and games drawn. Optionally Extra Scores per side, such as victory points. |
+| One Entrant | The round, and what it is: a Bye assigned by pairing, a Bye awarded by the Organiser, or an Unplayed Loss (Late Entry, penalty). |
 
 **Per call**:
 
@@ -52,7 +53,7 @@ Every point here has been agreed.
 | Planned rounds | Optional. Used by a win rate that counts planned rounds. For Standings during an event, pass the rounds completed so far. |
 | Random Seed | String. Needed only when the random Tiebreaker is chosen. |
 
-Optional inputs are required only when the chosen Configuration uses them. Game scores, a named extra score, Status and planned rounds all follow this rule; a missing one is an input error.
+Optional inputs are required only when the chosen Configuration uses them. Game scores, an Extra Score, Status and planned rounds all follow this rule; a missing one is an input error.
 
 ## Configuration
 
@@ -66,10 +67,10 @@ Points always come from the Configuration. A Result never states its own points.
 |---|---|
 | The Outcome | win 3, draw 1, loss 0 |
 | The game score | 2-0 earns 7; 1-1 earns 3 each |
-| The difference in a named extra score | victory points 0 to 5 apart: 10 each; 6 to 10 apart: 11 and 9 |
-| A named extra score itself | Score is total victory points |
+| The difference in an Extra Score | victory points 0 to 5 apart: 10 each; 6 to 10 apart: 11 and 9 |
+| An Extra Score itself | Score is total victory points |
 
-How a Bye scores is a separate setting: its points, its game score, and whether it counts as a round played. A loss with no opponent has the same three settings.
+How a Bye scores is a separate setting: its points, its game score, and whether it counts as a round played. An Unplayed Loss has the same three settings.
 
 ### Allowed Outcomes
 
@@ -88,7 +89,7 @@ The v1 catalogue:
 - Opponents' game win percentage.
 - Loss rate, own and opponents'.
 - Counts: wins, game wins.
-- For a named extra score: total for, total against, and the difference. The difference is margin of victory.
+- For an Extra Score: total for, total against, and the difference. The difference is margin of victory.
 - Later losses rank higher.
 - Head-to-head, when exactly two Entrants are level and they met.
 - Random.
@@ -131,13 +132,13 @@ One row per Entrant, in order:
 - The value of each Tiebreaker, as an exact fraction plus a plain number for display.
 - Rank.
 - What pairing needs: opponents faced and Byes received. A mapping function in the shared package turns rows into pairing Entrants.
-- Counts of assigned and awarded Byes.
+- Counts of assigned and Awarded Byes.
 
 Plus the engine version.
 
 **Opponents faced**: every Result with two Entrants counts, however it ended, including a double loss or a no-show.
 
-**Byes received**: counts Byes assigned by pairing. A setting includes awarded Byes too.
+**Byes received**: counts Byes assigned by pairing. A setting includes Awarded Byes too.
 
 **Removed Entrants**: no Rank and no row in the order. Results against them still count for their opponents' Score and Tiebreakers.
 

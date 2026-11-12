@@ -42,7 +42,7 @@ export const presets: { 'magic-2026-02-27': Preset; 'pokemon-2026-09-01': Preset
     configuration: {
       points: { type: 'by-outcome', win: 3, draw: 1, loss: 0 },
       bye: { points: 3, games: [2, 0, 0], countsAsPlayed: true },
-      soloLoss: { points: 0, games: [0, 2, 0], countsAsPlayed: true },
+      unplayedLoss: { points: 0, games: [0, 2, 0], countsAsPlayed: true },
       allow: { draws: true, doubleLosses: true },
       tiebreakers: [
         { type: 'opponents-match-win-rate', rate: magicRate, withNoOpponents: magicFloor },
@@ -72,7 +72,7 @@ export const presets: { 'magic-2026-02-27': Preset; 'pokemon-2026-09-01': Preset
     configuration: {
       points: { type: 'by-outcome', win: 3, draw: 1, loss: 0 },
       bye: { points: 3, games: [0, 0, 0], countsAsPlayed: false },
-      soloLoss: { points: 0, games: [0, 0, 0], countsAsPlayed: true },
+      unplayedLoss: { points: 0, games: [0, 0, 0], countsAsPlayed: true },
       allow: { draws: true, doubleLosses: true },
       tiebreakers: [
         { type: 'opponents-match-win-rate', rate: pokemonRate, withNoOpponents: pokemonFloor },

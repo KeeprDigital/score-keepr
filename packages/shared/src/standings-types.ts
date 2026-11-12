@@ -21,16 +21,16 @@ export type MatchResult = {
   outcomes: [Outcome, Outcome]
   /** Games won by the first Entrant, games won by the second, games drawn. */
   games?: [number, number, number]
-  /** Named extra scores, such as victory points, for the first and second Entrant. */
-  scores?: Record<string, [number, number]>
+  /** Extra Scores, such as victory points, for the first and second Entrant. */
+  extraScores?: Record<string, [number, number]>
 }
 
 /** A round in which an Entrant had no opponent. */
 export type SoloResult = {
   round: number
   entrant: EntrantId
-  /** A Bye assigned by pairing, a Bye awarded by the organiser, or a loss with no opponent. */
-  kind: 'bye' | 'awarded-bye' | 'loss'
+  /** A Bye assigned by pairing, an Awarded Bye, or an Unplayed Loss. */
+  kind: 'bye' | 'awarded-bye' | 'unplayed-loss'
 }
 
 export type Result = MatchResult | SoloResult
@@ -44,16 +44,16 @@ export type PointsMethod =
   /** Looked up from a side's own games won, lost and drawn. Every game score that occurs must be listed. */
   | { type: 'by-game-score'; table: { won: number; lost: number; drawn: number; points: number }[] }
   /**
-   * From how far apart the two sides are on a named extra score. The first band whose `upTo` is
+   * From how far apart the two sides are on an Extra Score. The first band whose `upTo` is
    * not below the difference applies; the last band has `upTo: null`. Level sides both get `higher`.
    */
   | {
-      type: 'by-score-difference'
-      score: string
+      type: 'by-extra-score-difference'
+      extraScore: string
       bands: { upTo: number | null; higher: number; lower: number }[]
     }
-  /** The named extra score is itself the points. */
-  | { type: 'by-score'; score: string }
+  /** The Extra Score is itself the points. */
+  | { type: 'by-extra-score'; extraScore: string }
 
 /** How a round with no opponent counts. */
 export type SoloScoring = {
@@ -104,8 +104,8 @@ export type Tiebreaker =
   | { type: 'opponents-loss-rate'; withNoOpponents: Ratio }
   | { type: 'wins'; includeByes: boolean }
   | { type: 'game-wins'; includeByes: boolean }
-  /** A named extra score added up: what the Entrant scored, what was scored against them, or the difference. */
-  | { type: 'score-total'; score: string; of: 'for' | 'against' | 'difference' }
+  /** An Extra Score added up: what the Entrant scored, what was scored against them, or the difference. */
+  | { type: 'extra-score-total'; extraScore: string; of: 'for' | 'against' | 'difference' }
   /** The squares of the round numbers lost, added up, so later losses rank higher. */
   | { type: 'later-losses' }
   /** Only when exactly two Entrants are level and one beat the other more often than they lost. */
@@ -118,8 +118,8 @@ export type StandingsConfiguration = {
   points: PointsMethod
   /** How a Bye counts, whether assigned or awarded. */
   bye: SoloScoring
-  /** How a loss with no opponent counts. */
-  soloLoss: SoloScoring
+  /** How an Unplayed Loss counts. */
+  unplayedLoss: SoloScoring
   allow: { draws: boolean; doubleLosses: boolean }
   tiebreakers: Tiebreaker[]
   /** Whether "Byes received", used for the Bye cap in pairing, counts awarded Byes too. */

@@ -14,7 +14,7 @@ Every point here has been agreed. The Standings Engine is specified in `docs/sta
   - Statistically uniform random draws (ADR 0005).
   - Table numbers.
   - Results, point values and tiebreakers (ADR 0001). These belong to the Standings Engine.
-  - Drops, late entries, awarded byes, pods, age divisions and locked Pairings. The Consumer handles these by choosing which Entrants to pass, one call per subset.
+  - Drops, Late Entries, Awarded Byes, pods, age divisions and locked Pairings. The Consumer handles these by choosing which Entrants to pass, one call per subset.
 
 ## Package
 
@@ -308,13 +308,15 @@ The Pairing Engine knows nothing about Standings and accepts facts from anywhere
 
 ## What the Consumer must do
 
+A Consumer that uses the Tournament Engine (`docs/tournament-spec.md`) has most of these done for it: the Log keeps the Random Seed and every call's input and output.
+
 - Supply consistent facts. The engine checks shape, not truth.
 - Store the Random Seed with the tournament. Keep it secret until pairing if Pairings must be unpredictable. Change it to re-roll.
 - Keep Entrant ids stable.
 - Run the engine in a worker when a UI must stay responsive.
 - Decide whether a result with Violations is acceptable.
 - Keep the input and output of every call, so any round can be replayed. The input holds the Random Seed and Configuration; the output holds the engine version.
-- Stop two operators pairing the same round at once.
+- Stop two Organisers pairing the same round at once.
 
 Storage is designed with the larger product, not in this repository.
 

@@ -1,6 +1,6 @@
 # Constraints apply in strict priority order
 
-When Constraints conflict, a higher-priority Constraint is never traded against any number of lower ones. We chose this over weighted scoring so that the order in a Configuration fully explains every result: an organiser can be told exactly why a Pairing was made, and reordering Constraints has a predictable effect.
+When Constraints conflict, a higher-priority Constraint is never traded against any number of lower ones. We chose this over weighted scoring so that the order in a Configuration fully explains every result: an Organiser can be told exactly why a Pairing was made, and reordering Constraints has a predictable effect.
 
 ## Considered Options
 

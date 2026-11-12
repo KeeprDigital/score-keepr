@@ -25,7 +25,7 @@ const isWhole = (value: unknown, least: number = Number.MIN_SAFE_INTEGER): value
   typeof value === 'number' && Number.isSafeInteger(value) && value >= least
 const isText = (value: unknown): value is string => typeof value === 'string' && value !== ''
 const OUTCOMES: readonly unknown[] = ['win', 'loss', 'draw']
-const SOLO_KINDS: readonly unknown[] = ['bye', 'awarded-bye', 'loss']
+const SOLO_KINDS: readonly unknown[] = ['bye', 'awarded-bye', 'unplayed-loss']
 
 /** Which Tiebreakers read game scores, and which settings each Tiebreaker takes. */
 const TIEBREAKER_SETTINGS: Record<Tiebreaker['type'], readonly string[]> = {
@@ -38,7 +38,7 @@ const TIEBREAKER_SETTINGS: Record<Tiebreaker['type'], readonly string[]> = {
   'opponents-loss-rate': ['withNoOpponents'],
   wins: ['includeByes'],
   'game-wins': ['includeByes'],
-  'score-total': ['score', 'of'],
+  'extra-score-total': ['extraScore', 'of'],
   'later-losses': [],
   'head-to-head': [],
   random: [],
@@ -218,8 +218,8 @@ function parseMatch(
   fields: FieldsOf,
   wrong: Wrong,
 ): MatchResult | undefined {
-  fields(value, where, ['round', 'entrants', 'outcomes'], ['games', 'scores'])
-  const { round, entrants, outcomes, games, scores } = value
+  fields(value, where, ['round', 'entrants', 'outcomes'], ['games', 'extraScores'])
+  const { round, entrants, outcomes, games, extraScores: scores } = value
   let sound = true
   const bad = (message: string): void => {
     wrong(`${where}: ${message}`)
@@ -256,7 +256,7 @@ function parseMatch(
       )
     )
   ) {
-    bad('`scores` must give two whole numbers for each named score.')
+    bad('`extraScores` must give two whole numbers for each Extra Score.')
   }
   if (!sound) return undefined
   const result: MatchResult = {
@@ -266,7 +266,7 @@ function parseMatch(
   }
   if (games !== undefined) result.games = [...(games as [number, number, number])]
   if (scores !== undefined) {
-    result.scores = Object.fromEntries(
+    result.extraScores = Object.fromEntries(
       Object.entries(scores as Record<string, [number, number]>).map(([name, pair]) => [
         name,
         [pair[0], pair[1]],
@@ -285,7 +285,9 @@ function parseSolo(
   fields(value, where, ['round', 'entrant', 'kind'])
   const { round, entrant, kind } = value
   if (!isWhole(round, 1) || !isText(entrant) || !SOLO_KINDS.includes(kind)) {
-    wrong(`${where} must have a round, one Entrant, and a kind of "bye", "awarded-bye" or "loss".`)
+    wrong(
+      `${where} must have a round, one Entrant, and a kind of "bye", "awarded-bye" or "unplayed-loss".`,
+    )
     return undefined
   }
   return { round, entrant, kind: kind as SoloResult['kind'] }
@@ -309,7 +311,7 @@ function parseConfiguration(
   const value = fields(raw, 'The Configuration', [
     'points',
     'bye',
-    'soloLoss',
+    'unplayedLoss',
     'allow',
     'tiebreakers',
     'byesReceived',
@@ -318,7 +320,7 @@ function parseConfiguration(
 
   const points = parsePoints(value['points'], fields, wrong)
   const bye = parseSoloScoring(value['bye'], '`bye`', fields, wrong)
-  const soloLoss = parseSoloScoring(value['soloLoss'], '`soloLoss`', fields, wrong)
+  const unplayedLoss = parseSoloScoring(value['unplayedLoss'], '`unplayedLoss`', fields, wrong)
   const allow = fields(value['allow'], '`allow`', ['draws', 'doubleLosses'])
   if (
     allow !== undefined &&
@@ -351,7 +353,7 @@ function parseConfiguration(
   return {
     points: points as PointsMethod,
     bye: bye as SoloScoring,
-    soloLoss: soloLoss as SoloScoring,
+    unplayedLoss: unplayedLoss as SoloScoring,
     allow: { draws: allow?.['draws'] as boolean, doubleLosses: allow?.['doubleLosses'] as boolean },
     tiebreakers,
     byesReceived: byesReceived as StandingsConfiguration['byesReceived'],
@@ -408,12 +410,12 @@ function parsePoints(raw: unknown, fields: FieldsOf, wrong: Wrong): PointsMethod
         ),
       }
     }
-    case 'by-score-difference': {
-      fields(raw, '`points`', ['type', 'score', 'bands'])
+    case 'by-extra-score-difference': {
+      fields(raw, '`points`', ['type', 'extraScore', 'bands'])
       const bands = raw['bands']
-      if (raw['score'] === undefined || bands === undefined) return undefined
+      if (raw['extraScore'] === undefined || bands === undefined) return undefined
       const shaped =
-        isText(raw['score']) &&
+        isText(raw['extraScore']) &&
         Array.isArray(bands) &&
         bands.length > 0 &&
         bands.every(
@@ -447,23 +449,23 @@ function parsePoints(raw: unknown, fields: FieldsOf, wrong: Wrong): PointsMethod
         return undefined
       }
       return {
-        type: 'by-score-difference',
-        score: raw['score'] as string,
+        type: 'by-extra-score-difference',
+        extraScore: raw['extraScore'] as string,
         bands: list.map((band) => ({ ...band })),
       }
     }
-    case 'by-score': {
-      fields(raw, '`points`', ['type', 'score'])
-      if (raw['score'] === undefined) return undefined
-      if (!isText(raw['score'])) {
-        wrong('`points.score` must name an extra score.')
+    case 'by-extra-score': {
+      fields(raw, '`points`', ['type', 'extraScore'])
+      if (raw['extraScore'] === undefined) return undefined
+      if (!isText(raw['extraScore'])) {
+        wrong('`points.extraScore` must name an Extra Score.')
         return undefined
       }
-      return { type: 'by-score', score: raw['score'] }
+      return { type: 'by-extra-score', extraScore: raw['extraScore'] }
     }
     default:
       wrong(
-        '`points.type` must be "by-outcome", "by-game-score", "by-score-difference" or "by-score".',
+        '`points.type` must be "by-outcome", "by-game-score", "by-extra-score-difference" or "by-extra-score".',
       )
       return undefined
   }
@@ -625,13 +627,15 @@ function parseTiebreaker(
       const includeByes = flag('includeByes')
       return includeByes === undefined ? undefined : { type: known, includeByes }
     }
-    case 'score-total': {
-      const { score, of } = raw
-      if (!isText(score) || (of !== 'for' && of !== 'against' && of !== 'difference')) {
-        wrong(`${where} needs a \`score\` name and \`of\` set to "for", "against" or "difference".`)
+    case 'extra-score-total': {
+      const { extraScore, of } = raw
+      if (!isText(extraScore) || (of !== 'for' && of !== 'against' && of !== 'difference')) {
+        wrong(
+          `${where} needs an \`extraScore\` name and \`of\` set to "for", "against" or "difference".`,
+        )
         return undefined
       }
-      return { type: known, score, of }
+      return { type: known, extraScore, of }
     }
     default:
       return { type: known }
@@ -650,10 +654,10 @@ function checkAgainstConfiguration(
     points.type === 'by-game-score' ||
     tiebreakers.some((tiebreaker) => USES_GAMES.includes(tiebreaker.type))
   const scoreNames = new Set<string>()
-  if (points.type === 'by-score-difference' || points.type === 'by-score')
-    scoreNames.add(points.score)
+  if (points.type === 'by-extra-score-difference' || points.type === 'by-extra-score')
+    scoreNames.add(points.extraScore)
   for (const tiebreaker of tiebreakers)
-    if (tiebreaker.type === 'score-total') scoreNames.add(tiebreaker.score)
+    if (tiebreaker.type === 'extra-score-total') scoreNames.add(tiebreaker.extraScore)
 
   for (const result of results) {
     if ('entrant' in result) continue
@@ -687,10 +691,10 @@ function checkAgainstConfiguration(
       )
     }
     for (const name of scoreNames) {
-      if (result.scores?.[name] === undefined) {
+      if (result.extraScores?.[name] === undefined) {
         problem(
-          'missing-score',
-          `${where}: the Configuration uses the score "${name}", and this Result does not have it.`,
+          'missing-extra-score',
+          `${where}: the Configuration uses the Extra Score "${name}", and this Result does not have it.`,
           both,
         )
       }

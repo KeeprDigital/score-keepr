@@ -91,11 +91,27 @@ describe('computeStandings input checks', () => {
     ],
     ['negative games', (i) => (results(i)[0]!['games'] = [2, -1, 0]), 'invalid-input'],
     [
-      'a named score that is not a pair',
-      (i) => (results(i)[0]!['scores'] = { vp: 50 }),
+      'an Extra Score that is not a pair',
+      (i) => (results(i)[0]!['extraScores'] = { vp: 50 }),
       'invalid-input',
     ],
     ['an unknown field on a Result', (i) => (results(i)[0]!['table'] = 4), 'unknown-field'],
+    // Names used before the vocabulary was settled. None is kept as an alias.
+    [
+      'Extra Scores under their old name',
+      (i) => (results(i)[0]!['scores'] = { vp: [70, 40] }),
+      'unknown-field',
+    ],
+    [
+      'an Unplayed Loss under its old name',
+      (i) => results(i).push({ round: 2, entrant: 'ann', kind: 'loss' }),
+      'invalid-input',
+    ],
+    [
+      'the Unplayed Loss setting under its old name',
+      (i) => (config(i)['soloLoss'] = config(i)['unplayedLoss']),
+      'unknown-field',
+    ],
     [
       'a solo Result of an unknown kind',
       (i) => (results(i)[1]!['kind'] = 'forfeit'),
@@ -135,8 +151,8 @@ describe('computeStandings input checks', () => {
     ['a Configuration with no points method', (i) => delete config(i)['points'], 'missing-setting'],
     ['a Configuration with no Bye setting', (i) => delete config(i)['bye'], 'missing-setting'],
     [
-      'a Configuration with no solo-loss setting',
-      (i) => delete config(i)['soloLoss'],
+      'a Configuration with no Unplayed Loss setting',
+      (i) => delete config(i)['unplayedLoss'],
       'missing-setting',
     ],
     [
@@ -155,6 +171,22 @@ describe('computeStandings input checks', () => {
       'missing-setting',
     ],
     ['an unknown field on the Configuration', (i) => (config(i)['name'] = 'mine'), 'unknown-field'],
+    // Names used before the vocabulary was settled. None is kept as an alias.
+    [
+      'a points method from an Extra Score under its old name',
+      (i) => (config(i)['points'] = { type: 'by-score', extraScore: 'vp' }),
+      'invalid-input',
+    ],
+    [
+      'the Extra Score total under its old name',
+      (i) => (config(i)['tiebreakers'] = [{ type: 'score-total', extraScore: 'vp', of: 'for' }]),
+      'unknown-tiebreaker',
+    ],
+    [
+      'an Extra Score named under the old field',
+      (i) => (config(i)['tiebreakers'] = [{ type: 'extra-score-total', score: 'vp', of: 'for' }]),
+      'unknown-field',
+    ],
     [
       'an unknown points method',
       (i) => (config(i)['points'] = { type: 'by-vibes' }),
@@ -228,13 +260,16 @@ describe('computeStandings input checks', () => {
       'missing-setting',
     ],
     [
-      'a score total that does not say which way',
-      (i) => (config(i)['tiebreakers'] = [{ type: 'score-total', score: 'vp' }]),
+      'an Extra Score total that does not say which way',
+      (i) => (config(i)['tiebreakers'] = [{ type: 'extra-score-total', extraScore: 'vp' }]),
       'missing-setting',
     ],
     [
-      'a score total of something unknown',
-      (i) => (config(i)['tiebreakers'] = [{ type: 'score-total', score: 'vp', of: 'average' }]),
+      'an Extra Score total of something unknown',
+      (i) =>
+        (config(i)['tiebreakers'] = [
+          { type: 'extra-score-total', extraScore: 'vp', of: 'average' },
+        ]),
       'invalid-input',
     ],
   ])('rejects %s', (_, change, code) => {
@@ -276,16 +311,16 @@ describe('computeStandings input checks', () => {
       'unlisted-game-score',
     ],
     [
-      'a named score missing when a Tiebreaker reads it',
+      'an Extra Score missing when a Tiebreaker reads it',
       { ...valid(), configuration: configurations['wargame'] as never },
       () => undefined,
-      'missing-score',
+      'missing-extra-score',
     ],
     [
-      'a named score missing when points come from it',
+      'an Extra Score missing when points come from it',
       { ...valid(), configuration: configurations['points-are-vp'] as never },
       () => undefined,
-      'missing-score',
+      'missing-extra-score',
     ],
     [
       'no planned rounds when a win rate counts them',
@@ -339,10 +374,10 @@ describe('computeStandings input checks', () => {
       },
     ],
     [
-      'game scores and named scores nobody reads',
+      'game scores and Extra Scores nobody reads',
       (i) => {
         results(i)[0]!['games'] = [2, 1, 0]
-        results(i)[0]!['scores'] = { vp: [70, 40] }
+        results(i)[0]!['extraScores'] = { vp: [70, 40] }
       },
     ],
     [
@@ -403,7 +438,7 @@ describe('computeStandings input checks', () => {
               {
                 round: fc.nat({ max: 3 }),
                 entrant: fc.constantFrom('ann', 'zed'),
-                kind: fc.constantFrom('bye', 'loss', 'x'),
+                kind: fc.constantFrom('bye', 'unplayed-loss', 'x'),
               },
               { requiredKeys: [] },
             ),
@@ -416,7 +451,7 @@ describe('computeStandings input checks', () => {
             {
               points: fc.anything(),
               bye: fc.anything(),
-              soloLoss: fc.anything(),
+              unplayedLoss: fc.anything(),
               allow: fc.anything(),
               tiebreakers: fc.array(
                 fc.record(

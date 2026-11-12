@@ -19,7 +19,7 @@ import { configurations } from './configurations.ts'
  * The table has `round` and `result`. A result reads:
  *
  *     ann beat ben            ann beat ben 2-1         ann drew ben 1-1-1
- *     ann and ben both lost   ann beat ben vp 78-54    ann bye / awarded-bye / loss
+ *     ann and ben both lost   ann beat ben vp 78-54    ann bye / awarded-bye / unplayed-loss
  *
  * A game score is games won by the first Entrant, by the second, then drawn.
  */
@@ -61,7 +61,7 @@ function readResult(round: number, text: string): Result {
   const parts = words(text)
   const [first, verb, second] = parts
   if (first === undefined || verb === undefined) throw new Error(`Cannot read result "${text}"`)
-  if (verb === 'bye' || verb === 'awarded-bye' || verb === 'loss')
+  if (verb === 'bye' || verb === 'awarded-bye' || verb === 'unplayed-loss')
     return { round, entrant: first, kind: verb }
   if (verb === 'and' && parts[3] === 'both' && parts[4] === 'lost' && second !== undefined) {
     return { round, entrants: [first, second], outcomes: ['loss', 'loss'] }
@@ -80,7 +80,7 @@ function readResult(round: number, text: string): Result {
       result.games = [won, lost, drawn]
     } else {
       const [mine = 0, theirs = 0] = (parts[++at] ?? '').split('-').map(Number)
-      result.scores = { ...result.scores, [part]: [mine, theirs] }
+      result.extraScores = { ...result.extraScores, [part]: [mine, theirs] }
     }
   }
   return result
