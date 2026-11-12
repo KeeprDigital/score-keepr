@@ -268,11 +268,22 @@ Development tooling may have dependencies. The shipped packages have no third-pa
 
 Every round was proven best. `pnpm bench <entrants> <rounds> --check` repeats it and fails if a round is unproven or over target.
 
+Other Configurations, one round each, same machine. All were proven best; some are slow:
+
+| Configuration | 2,001 Entrants | 6,001 Entrants |
+|---|---|---|
+| Starting | 0.1 s | 0.5 s |
+| Avoid same club, then starting | 0.2 s | 0.5 s |
+| Starting with a Pair-down choice by Rank | 0.2 s | 1.2 s |
+| No rematch, then pair adjacent by Rank | 0.6 s | 2.8 s |
+| Prefer same pod (pods of 8), then starting | 3.1 s | 43 s |
+| Pair top vs bottom by Rank | 8.3 s | over 60 s |
+
+The last three are slow for the same reason. The matcher is first offered opponents who are close in Score and Shuffle Position, and the proof step rules Pairings out by the same two things. A Constraint that wants something else, such as a pod-mate or the mirror Rank, gets poor first offers and a proof step that falls back towards looking at every pair. The answers are still exact; only the time suffers. Offering opponents and ruling them out by Group Label and by Rank is the fix, and is not built.
+
 Not yet shown:
 
 - Speed on a mid-range laptop or in a browser. The M4 is faster than the target machine.
-- Speed for Constraints that use Rank. The proof step is fast because Scores and Shuffle Positions let it rule out most Pairings at once; a Rank Constraint with nothing above it does not, and falls back towards looking at every pair.
-- Speed with Group Label or listed-pair Constraints high in the order on large fields.
 
 ## Shared package
 
