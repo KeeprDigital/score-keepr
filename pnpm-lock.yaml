@@ -200,6 +200,10 @@ importers:
       '@score-keepr/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      '@score-keepr/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/testkit: {}
 

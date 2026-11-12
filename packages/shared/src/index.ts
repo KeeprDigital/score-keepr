@@ -16,6 +16,24 @@ export type {
 } from './pairing-types.ts'
 export { compareCodeUnits, distinctPositions, seededUint32 } from './seeded.ts'
 export type {
+  MatchResult,
+  Outcome,
+  PointsMethod,
+  RateSettings,
+  Ratio,
+  Result,
+  SoloResult,
+  SoloScoring,
+  StandingsConfiguration,
+  StandingsEntrant,
+  StandingsInput,
+  StandingsResult,
+  StandingsRow,
+  StandingsSuccess,
+  Tiebreaker,
+  TiebreakerValue,
+} from './standings-types.ts'
+export type {
   Slot,
   StructureInput,
   StructurePairing,

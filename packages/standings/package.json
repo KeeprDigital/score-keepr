@@ -23,5 +23,8 @@
   },
   "dependencies": {
     "@score-keepr/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@score-keepr/testkit": "workspace:*"
   }
 }

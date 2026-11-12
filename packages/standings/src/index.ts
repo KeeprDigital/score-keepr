@@ -1,5 +1,25 @@
-import { seededUint32 } from '@score-keepr/shared'
-
-// Placeholder: proves the workspace wiring. Replace with the first real export.
-export const packageName = '@score-keepr/standings'
-export const wired: boolean = typeof seededUint32 === 'function'
+export type {
+  EntrantId,
+  Failure,
+  InputError,
+  MatchResult,
+  Outcome,
+  PointsMethod,
+  RateSettings,
+  Ratio,
+  Result,
+  SoloResult,
+  SoloScoring,
+  StandingsConfiguration,
+  StandingsEntrant,
+  StandingsInput,
+  StandingsResult,
+  StandingsRow,
+  StandingsSuccess,
+  Tiebreaker,
+  TiebreakerValue,
+} from '@score-keepr/shared'
+export { presets, type Preset } from './presets.ts'
+export { computeStandings } from './standings.ts'
+export { startingConfiguration } from './starting.ts'
+export { ENGINE_VERSION } from './version.ts'
