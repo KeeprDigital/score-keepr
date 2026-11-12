@@ -97,6 +97,29 @@ describe('the fast matcher against the slow exact solver', () => {
     )
   })
 
+  test('the fast proof step and the plain one, which looks at every pair, agree', () => {
+    fc.assert(
+      fc.property(
+        round({ minEntrants: 9, maxEntrants: 60 }),
+        fc.constantFrom(1, 2, 6),
+        (input, neighbours) => {
+          const field = buildField(input)
+          const levels = levelsOf(input.configuration, field)
+          const fast = solveByMatching(field, levels, { completeUpTo: 0, neighbours }) as Mates
+          const plain = solveByMatching(field, levels, {
+            completeUpTo: 0,
+            neighbours,
+            plainProof: true,
+          }) as Mates
+          expect(fast).toBeDefined()
+          expect(plain).toBeDefined()
+          expect(costOf(levels, fast)).toEqual(costOf(levels, plain))
+        },
+      ),
+      { numRuns: 400 },
+    )
+  })
+
   test('stops and says so when the work allowed runs out', () => {
     fc.assert(
       fc.property(round({ minEntrants: 4, maxEntrants: 12 }), (input) => {

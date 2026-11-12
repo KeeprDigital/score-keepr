@@ -2,12 +2,12 @@ import type { Level } from '../cost.ts'
 import type { Mates } from '../exhaustive.ts'
 import type { Field } from '../field.ts'
 import {
-  addSharedBlossoms,
   solveMatching,
   verifyMatching,
   type MatchingGraph,
   type MatchingSolution,
 } from './blossom.ts'
+import { findImprovers, findImproversSlowly } from './improvers.ts'
 
 export type MatchOptions = {
   /** Give up, returning undefined, after this much work. */
@@ -16,6 +16,8 @@ export type MatchOptions = {
   completeUpTo?: number
   /** How many likely opponents each Entrant is offered at first. Fewer means more repair work. */
   neighbours?: number
+  /** Check left-out Pairings the plain way, one pair at a time. For comparing with the fast way. */
+  plainProof?: boolean
 }
 
 /** Same-Score neighbours, by Shuffle Position, that each Entrant is offered. */
@@ -91,7 +93,13 @@ export function solveByMatching(
     if (verifyMatching(graph, solution) !== undefined) return undefined
     if (complete) return matesOf(solution, n, BYE)
 
-    const improvers = findImprovers(field, levels, solution, N, 50 * N)
+    const improvers = (options.plainProof === true ? findImproversSlowly : findImprovers)(
+      field,
+      levels,
+      solution,
+      N,
+      50 * N,
+    )
     steps += n
     if (steps > maxSteps) return undefined
     if (improvers.length === 0) return matesOf(solution, n, BYE)
@@ -195,60 +203,4 @@ function offerLikely(
         offer(byRank[at]!, byRank[next]!)
     }
   }
-}
-
-/**
- * Checks every possible Pairing against the proof and returns those that could improve the
- * result, as edge keys. An empty list means the result is best over all Pairings.
- */
-function findImprovers(
-  field: Field,
-  levels: readonly Level[],
-  solution: MatchingSolution,
-  N: number,
-  atMost: number,
-): number[] {
-  const n = field.size
-  const K = levels.length
-  const { dual, inblossom } = solution
-  const improvers: number[] = []
-  const slack = new Float64Array(K)
-
-  for (let a = 0; a < n; a++) {
-    const oa = a * K
-    for (let b = a + 1; b < n; b++) {
-      const ob = b * K
-      let sign = 0
-      for (let c = 0; c < K; c++) {
-        const x = dual[oa + c]! + dual[ob + c]! + 2 * levels[c]!.pair(a, b)
-        if (x > 0) {
-          sign = 1
-          break
-        }
-        if (x < 0) {
-          sign = -1
-          break
-        }
-      }
-      if (sign >= 0) continue
-      if (inblossom[a] === inblossom[b]) {
-        // Inside a shared blossom the blossoms' own duals count too, and can only help.
-        for (let c = 0; c < K; c++)
-          slack[c] = dual[oa + c]! + dual[ob + c]! + 2 * levels[c]!.pair(a, b)
-        addSharedBlossoms(slack, a, b, solution, K)
-        let stillNegative = false
-        for (let c = 0; c < K; c++) {
-          if (slack[c]! > 0) break
-          if (slack[c]! < 0) {
-            stillNegative = true
-            break
-          }
-        }
-        if (!stillNegative) continue
-      }
-      improvers.push(a * N + b)
-      if (improvers.length >= atMost) return improvers
-    }
-  }
-  return improvers
 }

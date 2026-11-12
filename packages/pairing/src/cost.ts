@@ -12,6 +12,8 @@ import type { Field } from './field.ts'
 export type Level = {
   pair(a: number, b: number): number
   bye(a: number): number
+  /** True when a Pairing's score depends on the two Scores and nothing else. */
+  scoreOnly?: boolean
 }
 
 const NONE = (): number => 0
@@ -107,12 +109,13 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
       return [{ pair: NONE, bye: (a) => worse[a] as number }]
     }
     case 'pair-close-in-score':
-      return [{ pair: (a, b) => square(score(a) - score(b)), bye: NONE }]
+      return [{ pair: (a, b) => square(score(a) - score(b)), bye: NONE, scoreOnly: true }]
     case 'keep-top-clean':
       return [
         {
           pair: (a, b) => (pairDown(a, b) ? Math.max(score(a), score(b)) - field.minScore + 1 : 0),
           bye: NONE,
+          scoreOnly: true,
         },
       ]
     case 'keep-bottom-clean':
@@ -120,6 +123,7 @@ function levelsOfConstraint(constraint: Constraint, field: Field): Level[] {
         {
           pair: (a, b) => (pairDown(a, b) ? field.maxScore - Math.min(score(a), score(b)) + 1 : 0),
           bye: NONE,
+          scoreOnly: true,
         },
       ]
     case 'pair-adjacent-by-rank': {

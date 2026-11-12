@@ -9,7 +9,8 @@
     "test:watch": "vp test watch",
     "test:record": "vp test -u",
     "build": "vp run -r build",
-    "verify": "vp check && vp test && vp run -r build"
+    "verify": "vp check && vp test && vp run -r build",
+    "bench": "node packages/pairing/bench/simulate.ts"
   },
   "devDependencies": {
     "@types/node": "26.6.6",

@@ -257,12 +257,22 @@ Development tooling may have dependencies. The shipped packages have no third-pa
 
 - Target: 10,000 Entrants in 2 s and 20,000 in 10 s per round, one thread, mid-range laptop, checked by a benchmark in CI.
 - If exactness and speed ever conflict, exactness wins and the time target loosens.
-- The prototype met the target with room to spare, on a fast machine and the starting Configuration only. Figures and limits: `prototype-matcher/README.md`.
+- Measured on the engine itself, whole call including input checks (Apple M4, Node 26, one thread, simulated event with drops, starting Configuration):
+
+| Entrants | Rounds | Slowest round |
+|---|---|---|
+| 2,001 | 9 | under 0.1 s |
+| 10,001 | 15 | 0.3 to 0.7 s |
+| 20,001 | 15 | 1.1 to 2.1 s |
+| 50,000 | 6 | 4.0 s |
+
+Every round was proven best. `pnpm bench <entrants> <rounds> --check` repeats it and fails if a round is unproven or over target.
 
 Not yet shown:
 
-- Speed on a mid-range laptop or in a browser.
-- Speed for any Constraint outside the starting Configuration. The proof step is fast because of how those Constraints are shaped; group labels, listed pairs and Rank Constraints are untested.
+- Speed on a mid-range laptop or in a browser. The M4 is faster than the target machine.
+- Speed for Constraints that use Rank. The proof step is fast because Scores and Shuffle Positions let it rule out most Pairings at once; a Rank Constraint with nothing above it does not, and falls back towards looking at every pair.
+- Speed with Group Label or listed-pair Constraints high in the order on large fields.
 
 ## Shared package
 
