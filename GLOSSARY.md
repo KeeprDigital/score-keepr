@@ -12,9 +12,41 @@ _Avoid_: Matchmaker, scheduler
 The component that turns match results into Standings. It alone knows results, point values and tiebreakers.
 _Avoid_: Scoring engine, ranking engine
 
+**Tournament Engine**:
+The component that turns a Log into the tournament as it stands and makes each new Action. It calls the other two engines.
+_Avoid_: Event engine, state machine, orchestrator
+
 **Consumer**:
 Whatever software calls the engines and owns the tournament's records.
 _Avoid_: Client, host, app
+
+**Device**:
+One running copy of the Consumer that records Actions, such as a laptop or a phone's browser.
+_Avoid_: Client, node, replica, peer
+
+**Action**:
+One thing somebody did in a tournament, recorded once and never changed.
+_Avoid_: Event, command, operation, change
+
+**Log**:
+Every Action recorded for one tournament. It is the only record treated as true; everything else is worked out from it.
+_Avoid_: History, event log, journal
+
+**Clash**:
+Two Actions about the same thing, made by Devices that had not seen each other's.
+_Avoid_: Conflict, collision, race
+
+**Flag**:
+Something the Tournament Engine asks an organiser to look at. It never blocks anything.
+_Avoid_: Warning, error, Violation (a broken Constraint), conflict
+
+**Phase**:
+One part of a tournament with its own Pairing System and its own Entrants, such as a Swiss Phase or a Top Cut.
+_Avoid_: Stage, day, bracket
+
+**Section**:
+A set of Entrants within a Phase who are paired only among themselves.
+_Avoid_: Pod (one way of making a Section), group, division, flight
 
 **Entrant**:
 One competing unit in a tournament, whether a single player or a team.
@@ -73,7 +105,7 @@ A named Standings Configuration shipped with the engine and tied to one dated ru
 _Avoid_: Ruleset, template, profile
 
 **Final Placing**:
-An Entrant's finishing position once a Top Cut has been played.
+An Entrant's finishing position in the tournament, once its last Phase has been played.
 _Avoid_: Final rank, final standing
 
 **Rank**:
@@ -113,7 +145,7 @@ One side of a Pairing in a Fixed-Structure System: either a named Entrant or the
 _Avoid_: Seat, position, placeholder
 
 **Top Cut**:
-The elimination stage played by the best-ranked Entrants after the round-by-round stage ends.
+A Single Elimination Phase entered by the best-ranked Entrants of the Phases before it.
 _Avoid_: Playoffs, finals, cut
 
 **Random Seed**:

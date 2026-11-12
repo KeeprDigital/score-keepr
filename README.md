@@ -16,11 +16,12 @@ Tournament engines: one decides who plays whom, one works out the standings. Bot
 | `.vscode/` | Editor settings so format-on-save uses the root config. |
 | `docs/spec.md` | Pairing Engine spec. |
 | `docs/standings-spec.md` | Standings Engine spec. |
+| `docs/tournament-spec.md` | Tournament Engine spec. Designed, not built. |
 | `docs/adr/` | Decision records. |
 | `GLOSSARY.md` | The project's vocabulary. Use these words. |
 | `prototype-matcher/` | Throwaway prototype of the matcher. Not part of the build. |
 
-Both engines are built. `docs/spec.md` and `docs/standings-spec.md` say what is measured and what is not.
+Both engines are built. `docs/spec.md` and `docs/standings-spec.md` say what is measured and what is not. A third, the Tournament Engine, is designed in `docs/tournament-spec.md` and not yet built: it turns the record of a tournament into its current state and calls the other two.
 
 ## Commands
 
